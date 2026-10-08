@@ -29,7 +29,7 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 ## Conventions
 
 - One type per file, except generic arities of one name, which share a file (`Link.cs`, `IFeature.cs`).
-- Feature names: commands are verb phrases, queries are noun phrases, event handlers are `Handle` plus the event. The test features `FindEmployees`, `Review` and `Remind` predate this rule and break it; don't copy them.
+- Feature names: commands are verb phrases, queries are noun phrases, event handlers are `Handle` plus the event. In the tests, `EmployeeSearch` is a query, `Remind` a command and `HandleEmployeeLeft` an event handler.
 - Prose (README, XML docs) is in classic style: direct, no metadiscourse, no hedging.
 
 ## Architecture
@@ -47,4 +47,4 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 
 ## Tests
 
-`Featurewise.Tests/FeaturesTests.cs` holds all the tests, named as sentences describing behaviour. The other files in that project are small purpose-built features, authorization handlers and helpers that the tests exercise (e.g. `Fire`, `Review`, `Promote` as a deliberately mis-declared feature, `Callers` for test principals, `CapturingLoggerProvider` for asserting on logs). Add a new fixture feature as its own file with a one-line comment saying what it's for.
+`Featurewise.Tests/FeaturesTests.cs` holds all the tests, named as sentences describing behaviour. The other files in that project are small purpose-built features, authorization handlers and helpers that the tests exercise (e.g. `Fire`, `EmployeeReview`, `Promote` as a deliberately mis-declared feature, `Callers` for test principals, `CapturingLoggerProvider` for asserting on logs). Add a new fixture feature as its own file with a one-line comment saying what it's for.

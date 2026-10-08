@@ -13,8 +13,8 @@ namespace Featurewise;
 /// which features are open:
 /// <code>
 /// features
-///     .RegisterFeature&lt;Review&gt;()
-///     .RegisterAuthorizationHandler&lt;AnySignedInCaller&lt;Review.Args&gt;&gt;();
+///     .RegisterFeature&lt;EmployeeReview&gt;()
+///     .RegisterAuthorizationHandler&lt;AnySignedInCaller&lt;EmployeeReview.Args&gt;&gt;();
 /// </code>
 /// </para>
 /// <para>

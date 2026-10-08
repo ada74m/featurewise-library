@@ -102,7 +102,7 @@ public class FireAuthorization : AuthorizationHandler<InvokeRequirement, Fire.Ar
 }
 ```
 
-`AnySignedInCaller<Review.Args>` opens one feature to every signed-in caller. `[AllowAnonymous]` on a feature opens it to everyone. A job invokes links as `SystemCaller.For("nightly-reminders")`, which is signed in and named but has no special powers.
+`AnySignedInCaller<EmployeeReview.Args>` opens one feature to every signed-in caller. `[AllowAnonymous]` on a feature opens it to everyone. A job invokes links as `SystemCaller.For("nightly-reminders")`, which is signed in and named but has no special powers.
 
 A feature that offers a link asks `LinkPermissions.MayInvoke` first, which applies the same rules, so callers see only the links they can follow. Offering a link proves nothing later: a link that comes back is checked again.
 

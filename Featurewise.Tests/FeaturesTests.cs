@@ -26,11 +26,11 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         
         await using var features = new Features();
-        features.RegisterFeature<Review>();
+        features.RegisterFeature<EmployeeReview>();
         features.RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
         features.RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
         
-        var link = new Review.Args("e1");
+        var link = new EmployeeReview.Args("e1");
         var result = await features.Invoke(link, Callers.Manager);
 
         var fire = result.LinkToFire!;
@@ -213,18 +213,18 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
 
         await using var features = new Features();
         features
-            .RegisterFeature<Review>()
+            .RegisterFeature<EmployeeReview>()
             .RegisterFeature<Fire>()
             .RegisterAuthorizationHandler<FireAuthorization>();
 
         Fire.Args fireLink;
         using (new Activity("first request").Start())
         {
-            var result = await features.Invoke(new Review.Args("e1"), Callers.Manager);
+            var result = await features.Invoke(new EmployeeReview.Args("e1"), Callers.Manager);
             fireLink = result.LinkToFire!;
         }
 
-        var review = Assert.Single(stopped, a => a.OperationName == nameof(Review));
+        var review = Assert.Single(stopped, a => a.OperationName == nameof(EmployeeReview));
         Assert.Equal(review.Id, fireLink.CausedBy);
 
         using var secondRequest = new Activity("second request").Start();
@@ -243,17 +243,17 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Review>()
+            .RegisterFeature<EmployeeReview>()
             .RegisterFeature<Fire>()
             .RegisterAuthorizationHandler<FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
-        var result = await features.Invoke(new Review.Args("e1"), Callers.Manager);
+        var result = await features.Invoke(new EmployeeReview.Args("e1"), Callers.Manager);
         var fireLink = result.LinkToFire!;
         await features.Invoke(fireLink, Callers.Manager);
 
-        var invokingReview = Assert.Single(logs.Entries, e => e.Message.StartsWith("Invoking Review "));
-        Assert.Equal($"Invoking Review as {fireLink.CausedBy} caused by (null)", invokingReview.Message);
+        var invokingReview = Assert.Single(logs.Entries, e => e.Message.StartsWith("Invoking EmployeeReview "));
+        Assert.Equal($"Invoking EmployeeReview as {fireLink.CausedBy} caused by (null)", invokingReview.Message);
         Assert.Contains($"Invocation {fireLink.CausedBy} caused by (null)", invokingReview.Scopes);
 
         var firing = Assert.Single(logs.Entries, e => e.Message == "Firing e1");
@@ -372,11 +372,11 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     public void ALinkCarriesItsFeatureNameWhereverItIsSerialized()
     {
         using var features = new Features();
-        features.RegisterFeature<Review>().RegisterFeature<Fire>();
+        features.RegisterFeature<EmployeeReview>().RegisterFeature<Fire>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
-        var json = JsonSerializer.Serialize(new Review.Result("comments", new Fire.Args("e1")), options);
-        var readBack = JsonSerializer.Deserialize<Review.Result>(json, options)!;
+        var json = JsonSerializer.Serialize(new EmployeeReview.Result("comments", new Fire.Args("e1")), options);
+        var readBack = JsonSerializer.Deserialize<EmployeeReview.Result>(json, options)!;
 
         Assert.Contains("\"LinkToFire\":{\"$feature\":\"Fire\"", json);
         Assert.Equal(new Fire.Args("e1"), readBack.LinkToFire);
@@ -386,10 +386,10 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     public void AFeatureNameAttributeNamesTheFeatureInJson()
     {
         using var features = new Features();
-        features.RegisterFeature<Review>();
+        features.RegisterFeature<EmployeeReview>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
-        var json = JsonSerializer.Serialize<Link<Review.Result>>(new Review.Args("e1"), options);
+        var json = JsonSerializer.Serialize<Link<EmployeeReview.Result>>(new EmployeeReview.Args("e1"), options);
 
         Assert.Contains("\"$feature\":\"review-employee\"", json);
     }
@@ -457,7 +457,7 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     public async Task ALinkReadFromJsonAsAnyLinkCanBeInvoked()
     {
         await using var features = new Features();
-        features.RegisterFeature<Review>().RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
+        features.RegisterFeature<EmployeeReview>().RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
         var json = JsonSerializer.Serialize(new Fire.Args("e1"), options);
 
@@ -547,12 +547,12 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Review>()
+            .RegisterFeature<EmployeeReview>()
             .RegisterFeature<Fire>()
             .RegisterAuthorizationHandler<FireAuthorization>();
 
-        var managersReview = await features.Invoke(new Review.Args("e1"), Callers.Manager);
-        var employeesReview = await features.Invoke(new Review.Args("e1"), Callers.Employee);
+        var managersReview = await features.Invoke(new EmployeeReview.Args("e1"), Callers.Manager);
+        var employeesReview = await features.Invoke(new EmployeeReview.Args("e1"), Callers.Employee);
 
         Assert.Equal(new Fire.Args("e1"), managersReview.LinkToFire);
         Assert.Null(employeesReview.LinkToFire);
@@ -563,11 +563,11 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Review>()
+            .RegisterFeature<EmployeeReview>()
             .RegisterFeature<Fire>()
             .RegisterAuthorizationHandler<FireAuthorization>();
 
-        var offered = (await features.Invoke(new Review.Args("e1"), Callers.Manager)).LinkToFire!;
+        var offered = (await features.Invoke(new EmployeeReview.Args("e1"), Callers.Manager)).LinkToFire!;
 
         await Assert.ThrowsAsync<InvocationDeniedException>(() => features.Invoke(offered, Callers.Employee));
     }
@@ -593,8 +593,8 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Review>()
-            .RegisterAuthorizationHandler<AnySignedInCaller<Review.Args>>()
+            .RegisterFeature<EmployeeReview>()
+            .RegisterAuthorizationHandler<AnySignedInCaller<EmployeeReview.Args>>()
             .RegisterFeature<Fire>()
             .RegisterAuthorizationHandler<FireAuthorization>();
 
@@ -729,10 +729,10 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     public void AResultWithoutCasesIsSerializedAsItIs()
     {
         using var features = new Features();
-        features.RegisterFeature<Review>();
+        features.RegisterFeature<EmployeeReview>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
-        var json = JsonSerializer.Serialize(new Review.Result("comments", null), options);
+        var json = JsonSerializer.Serialize(new EmployeeReview.Result("comments", null), options);
 
         Assert.Equal("""{"Comments":"comments","LinkToFire":null}""", json);
     }
@@ -912,13 +912,13 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     [Theory]
     [InlineData("""{"$feature":"Fire"}""")]
     [InlineData("""{"$feature":"Fire","EmployeeId":null}""")]
-    [InlineData("""{"$feature":"FindEmployees","Limit":10}""")]
-    [InlineData("""{"$feature":"FindEmployees","Query":"a"}""")]
-    [InlineData("""{"$feature":"FindEmployees","Query":"a","Limit":null}""")]
+    [InlineData("""{"$feature":"EmployeeSearch","Limit":10}""")]
+    [InlineData("""{"$feature":"EmployeeSearch","Query":"a"}""")]
+    [InlineData("""{"$feature":"EmployeeSearch","Query":"a","Limit":null}""")]
     public void ALinkMissingANonNullableArgumentIsRejected(string json)
     {
         using var features = new Features();
-        features.RegisterFeature<Fire>().RegisterFeature<FindEmployees>();
+        features.RegisterFeature<Fire>().RegisterFeature<EmployeeSearch>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Link>(json, options));
@@ -928,10 +928,10 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     public async Task ALinksNullableAndDefaultedArgumentsMayBeLeftOut()
     {
         await using var features = new Features();
-        features.RegisterFeature<FindEmployees>();
+        features.RegisterFeature<EmployeeSearch>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
-        var link = JsonSerializer.Deserialize<Link>("""{"$feature":"FindEmployees","Query":"a","Limit":10}""", options)!;
+        var link = JsonSerializer.Deserialize<Link>("""{"$feature":"EmployeeSearch","Query":"a","Limit":10}""", options)!;
 
         Assert.Equal("a 10 - - 1", await features.Invoke(link, Callers.Anonymous));
     }
@@ -940,10 +940,10 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     public void TypesOtherThanLinksAreReadAsBefore()
     {
         using var features = new Features();
-        features.RegisterFeature<Review>();
+        features.RegisterFeature<EmployeeReview>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
-        var result = JsonSerializer.Deserialize<Review.Result>("{}", options)!;
+        var result = JsonSerializer.Deserialize<EmployeeReview.Result>("{}", options)!;
 
         Assert.Null(result.Comments);
     }
