@@ -136,6 +136,21 @@ foreach (var message in sqsEvent.Records)
 }
 ```
 
+Nobody waits for an event handler's answer, but every feature returns a result. A handler with nothing to say returns `Nil.Value`, and its invocation logs its outcome as `Nil`:
+
+```csharp
+public class HandleEmployeeLeft(IPayroll payroll) : Feature<HandleEmployeeLeft, HandleEmployeeLeft.Args, Nil>
+{
+    public record Args(string EmployeeId) : Link<HandleEmployeeLeft, Nil>;
+
+    public override async Task<Nil> Invoke(Args args, CancellationToken cancellationToken)
+    {
+        await payroll.Close(args.EmployeeId, cancellationToken);
+        return Nil.Value;
+    }
+}
+```
+
 Queues deliver each message at least once, so a handler may run twice for one event. The message id goes in as the idempotency key, and the handler reads it from `Invocation.IdempotencyKey` to recognise a redelivery. What a repeat means belongs to the handler: firing someone who has already left can simply return a case that says so.
 
 ## What every invocation records

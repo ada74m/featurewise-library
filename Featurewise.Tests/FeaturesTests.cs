@@ -670,6 +670,35 @@ public class FeaturesTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task AFeatureWithNothingToReturnReturnsNil()
+    {
+        var logs = new CapturingLoggerProvider();
+        await using var features = new Features();
+        features
+            .RegisterFeature<HandleEmployeeLeft>()
+            .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
+
+        var result = await features.Invoke(new HandleEmployeeLeft.Args("e1"), SystemCaller.For("employee-events"));
+
+        Assert.Same(Nil.Value, result);
+        var finished = Assert.Single(logs.Entries, e => e.Message.StartsWith("Invoked HandleEmployeeLeft"));
+        Assert.Matches(@"^Invoked HandleEmployeeLeft in \d+ ms: Nil$", finished.Message);
+    }
+
+    [Fact]
+    public void NilRoundTripsAsAnEmptyObject()
+    {
+        using var features = new Features();
+        features.RegisterFeature<HandleEmployeeLeft>();
+        var options = features.ConfigureJson(new JsonSerializerOptions());
+
+        var json = JsonSerializer.Serialize(Nil.Value, options);
+
+        Assert.Equal("{}", json);
+        Assert.Equal(Nil.Value, JsonSerializer.Deserialize<Nil>(json, options));
+    }
+
+    [Fact]
     public void AResultRoundTripsThroughItsBaseTypeWithItsCaseName()
     {
         using var features = new Features();

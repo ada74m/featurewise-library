@@ -14,7 +14,8 @@
 /// <typeparam name="TResult">
 /// The type that invoking the feature produces. If its outcomes differ in kind, make it a result with
 /// cases, as in the example: expected failures, such as not found, are cases the feature returns, and
-/// exceptions are left for unexpected ones.
+/// exceptions are left for unexpected ones. A feature with nothing to return, such as an event
+/// handler, produces <see cref="Nil"/>.
 /// </typeparam>
 /// <remarks>
 /// <para>
