@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -78,6 +79,9 @@ public class Features : IDisposable, IAsyncDisposable
     // Set for the duration of each invocation, so a nested call to Invoke can be rejected however the
     // feature got hold of a Features.
     private static readonly AsyncLocal<bool> Invoking = new();
+
+    // The feature each link type names, looked up once per type rather than on every invocation.
+    private static readonly ConcurrentDictionary<Type, Type> FeatureTypesByLinkType = new();
 
     /// <summary>
     /// The JSON property that names a link's feature, in JSON written with options set up by
@@ -583,8 +587,9 @@ public class Features : IDisposable, IAsyncDisposable
 
     // The feature a link names.
     internal static Type FeatureTypeOf(Link link) =>
-        GenericArgumentsOf(link.GetType(), typeof(Link<,>))?[0]
-        ?? throw new ArgumentException($"{link.GetType().Name} does not derive from Link<,>");
+        FeatureTypesByLinkType.GetOrAdd(link.GetType(), linkType =>
+            GenericArgumentsOf(linkType, typeof(Link<,>))?[0]
+            ?? throw new ArgumentException($"{linkType.Name} does not derive from Link<,>"));
 
     // The type arguments of the given generic base class, or null if type doesn't derive from it.
     internal static Type[]? GenericArgumentsOf(Type type, Type genericBase)

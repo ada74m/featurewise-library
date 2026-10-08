@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Collections.Concurrent;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Featurewise;
 
@@ -18,6 +19,9 @@ namespace Featurewise;
 /// </remarks>
 public sealed class LinkPermissions
 {
+    // Whether each feature type has [AllowAnonymous], read once per type rather than on every check.
+    private static readonly ConcurrentDictionary<Type, bool> AllowsAnonymousCallers = new();
+
     private readonly IAuthorizationService _authorization;
     private readonly Invocation _invocation;
 
@@ -35,7 +39,8 @@ public sealed class LinkPermissions
     /// </returns>
     public async Task<bool> MayInvoke(Link link)
     {
-        if (Features.FeatureTypeOf(link).GetCustomAttributes(inherit: false).OfType<IAllowAnonymous>().Any())
+        if (AllowsAnonymousCallers.GetOrAdd(Features.FeatureTypeOf(link), featureType =>
+                featureType.GetCustomAttributes(inherit: false).OfType<IAllowAnonymous>().Any()))
             return true;
 
         var result = await _authorization.AuthorizeAsync(_invocation.Caller, link, InvokeRequirement.Instance);
