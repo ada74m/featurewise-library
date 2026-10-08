@@ -12,6 +12,8 @@ dotnet test --filter "FullyQualifiedName~RegisteringAFeatureTwiceThrows"   # run
 
 `global.json` pins the .NET 10 SDK (released versions only, rolls forward to the latest feature band). Tests use xUnit 2.
 
+A change is done when the build is warning-free (doc comments included) and the full test run passes. For a behaviour change, temporarily remove the new code to confirm its test fails.
+
 ## What this is
 
 Featurewise is a library (`Featurewise/`) for structuring a service as a set of **features** (commands, queries, event handlers) invoked through **links** (records that name a feature and carry its arguments). `README.md` is the user-facing explanation of the model and its rules; read it before changing behaviour. The XML doc comments in the library are the detailed spec of each API's behaviour and are kept in step with the code (`GenerateDocumentationFile` is on, so a public member without one produces a build warning).
@@ -21,6 +23,14 @@ The design rules the code enforces, which changes must preserve (README "Boundar
 - **Every link names one feature.** Links derive from `Link<TFeature, TResult>` and nothing else.
 - **Deny by default.** A feature with no authorization rule can't be invoked.
 - **Links outlive the code that made them.** Adding a nullable or defaulted argument is safe; removing, renaming or requiring one takes two releases.
+
+Settled decisions, not to be reopened: named authorization policies were rejected; `Invocation` deliberately holds neither the args nor the result; idempotency belongs to features (the framework only passes the key along); versioning has no machinery, only the compatible-change habit; `Feature.Invoke` always takes a cancellation token; Native AOT isn't supported.
+
+## Conventions
+
+- One type per file, except generic arities of one name, which share a file (`Link.cs`, `IFeature.cs`).
+- Feature names: commands are verb phrases, queries are noun phrases, event handlers are `Handle` plus the event. The test features `FindEmployees`, `Review` and `Remind` predate this rule and break it; don't copy them.
+- Prose (README, XML docs) is in classic style: direct, no metadiscourse, no hedging.
 
 ## Architecture
 
