@@ -1,4 +1,4 @@
-# The UI backend: an HTTP API whose two routes, GET and POST /{feature}, reach one function.
+# The UI backend: an HTTP API whose one route, POST /{feature}, reaches one function.
 
 data "aws_iam_policy_document" "function" {
   source_policy_documents = [var.employees_policy_json]
@@ -50,12 +50,10 @@ resource "aws_apigatewayv2_authorizer" "jwt" {
   }
 }
 
-# Queries by GET, commands by POST. The function knows which features are which.
+# Every feature, query or command, by POST with its arguments as the body.
 resource "aws_apigatewayv2_route" "features" {
-  for_each = toset(["GET /{feature}", "POST /{feature}"])
-
   api_id             = aws_apigatewayv2_api.api.id
-  route_key          = each.key
+  route_key          = "POST /{feature}"
   target             = "integrations/${aws_apigatewayv2_integration.function.id}"
   authorization_type = var.jwt_issuer == null ? "NONE" : "JWT"
   authorizer_id      = var.jwt_issuer == null ? null : aws_apigatewayv2_authorizer.jwt[0].id

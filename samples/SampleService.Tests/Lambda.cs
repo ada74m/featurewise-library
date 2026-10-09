@@ -14,14 +14,26 @@ public static class Lambda
 
     public static readonly Dictionary<string, string> Employee = new() { ["sub"] = "e1" };
 
-    public static APIGatewayHttpApiV2ProxyRequest Get(
-        string feature, Dictionary<string, string>? claims, Dictionary<string, string>? query = null) =>
-        Request("GET", feature, claims, query: query);
-
+    // A request to the UI backend's one route, POST /{feature}.
     public static APIGatewayHttpApiV2ProxyRequest Post(
         string feature, Dictionary<string, string>? claims, string? body, string? idempotencyKey = null) =>
-        Request("POST", feature, claims, body,
-            headers: idempotencyKey is null ? null : new Dictionary<string, string> { ["idempotency-key"] = idempotencyKey });
+        new()
+        {
+            RawPath = $"/{feature}",
+            PathParameters = new Dictionary<string, string> { ["feature"] = feature },
+            Headers = idempotencyKey is null ? null : new Dictionary<string, string> { ["idempotency-key"] = idempotencyKey },
+            Body = body,
+            RequestContext = new APIGatewayHttpApiV2ProxyRequest.ProxyRequestContext
+            {
+                Http = new APIGatewayHttpApiV2ProxyRequest.HttpDescription { Method = "POST" },
+                Authorizer = claims is null
+                    ? null
+                    : new APIGatewayHttpApiV2ProxyRequest.AuthorizerDescription
+                    {
+                        Jwt = new APIGatewayHttpApiV2ProxyRequest.AuthorizerDescription.JwtDescription { Claims = claims }
+                    }
+            }
+        };
 
     public static SQSEvent Messages(params (string Id, string Body)[] messages) =>
         new() { Records = messages.Select(m => new SQSEvent.SQSMessage { MessageId = m.Id, Body = m.Body }).ToList() };
@@ -36,26 +48,4 @@ public static class Lambda
             Message = message,
             Timestamp = "2026-10-08T12:00:00.000Z"
         });
-
-    private static APIGatewayHttpApiV2ProxyRequest Request(
-        string method, string feature, Dictionary<string, string>? claims, string? body = null,
-        Dictionary<string, string>? query = null, Dictionary<string, string>? headers = null) =>
-        new()
-        {
-            RawPath = $"/{feature}",
-            PathParameters = new Dictionary<string, string> { ["feature"] = feature },
-            QueryStringParameters = query,
-            Headers = headers,
-            Body = body,
-            RequestContext = new APIGatewayHttpApiV2ProxyRequest.ProxyRequestContext
-            {
-                Http = new APIGatewayHttpApiV2ProxyRequest.HttpDescription { Method = method },
-                Authorizer = claims is null
-                    ? null
-                    : new APIGatewayHttpApiV2ProxyRequest.AuthorizerDescription
-                    {
-                        Jwt = new APIGatewayHttpApiV2ProxyRequest.AuthorizerDescription.JwtDescription { Claims = claims }
-                    }
-            }
-        };
 }

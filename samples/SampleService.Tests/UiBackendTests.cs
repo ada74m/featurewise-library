@@ -13,9 +13,9 @@ public class UiBackendTests
     public UiBackendTests() => _uiBackend = new Function(_fakes.Register);
 
     [Fact]
-    public async Task AQueryIsInvokedByGetWithItsArgumentsInTheQueryString()
+    public async Task AQueryIsInvokedByPostWithItsArgumentsAsTheBody()
     {
-        var response = await Handle(Lambda.Get("EmployeeDetails", Lambda.Manager, new() { ["EmployeeId"] = "e1" }));
+        var response = await Handle(Lambda.Post("EmployeeDetails", Lambda.Manager, """{"EmployeeId":"e1"}"""));
 
         Assert.Equal((int)HttpStatusCode.OK, response.StatusCode);
         var body = JsonNode.Parse(response.Body)!;
@@ -26,12 +26,26 @@ public class UiBackendTests
     }
 
     [Fact]
-    public async Task NumbersAreReadFromTheQueryString()
+    public async Task AQuerysArgumentsAreTypedAsTheFeatureDeclaresThem()
     {
-        var response = await Handle(Lambda.Get("ReviewsDue", Lambda.Manager, new() { ["WithinDays"] = "90" }));
+        var withinAQuarter = await Handle(Lambda.Post("ReviewsDue", Lambda.Manager, """{"WithinDays":90}"""));
+        var withinAMonth = await Handle(Lambda.Post("ReviewsDue", Lambda.Manager, null));
 
-        Assert.Equal((int)HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(2, JsonNode.Parse(response.Body)!["Employees"]!.AsArray().Count);
+        Assert.Equal((int)HttpStatusCode.OK, withinAQuarter.StatusCode);
+        Assert.Equal(2, JsonNode.Parse(withinAQuarter.Body)!["Employees"]!.AsArray().Count);
+        Assert.Single(JsonNode.Parse(withinAMonth.Body)!["Employees"]!.AsArray());
+    }
+
+    [Fact]
+    public async Task AnOfferedLinkIsFollowedByPostingItBackAsItCame()
+    {
+        var details = await Handle(Lambda.Post("EmployeeDetails", Lambda.Manager, """{"EmployeeId":"e1"}"""));
+        var link = JsonNode.Parse(details.Body)!["LinkToFire"]!;
+
+        var fired = await Handle(Lambda.Post((string)link["$feature"]!, Lambda.Manager, link.ToJsonString()));
+
+        Assert.Equal("""{"$case":"Fired"}""", fired.Body);
+        Assert.Equal(EmploymentStatus.Left, _fakes.Employees["e1"]!.Status);
     }
 
     [Fact]
@@ -56,23 +70,10 @@ public class UiBackendTests
     }
 
     [Fact]
-    public async Task AQueryCantBePostedNorACommandGot()
-    {
-        var postedQuery = await Handle(Lambda.Post("ReviewsDue", Lambda.Manager, "{}"));
-        var gotCommand = await Handle(Lambda.Get("Fire", Lambda.Manager, new() { ["EmployeeId"] = "e1" }));
-
-        Assert.Equal((int)HttpStatusCode.MethodNotAllowed, postedQuery.StatusCode);
-        Assert.Equal("GET", postedQuery.Headers["allow"]);
-        Assert.Equal((int)HttpStatusCode.MethodNotAllowed, gotCommand.StatusCode);
-        Assert.Equal("POST", gotCommand.Headers["allow"]);
-        Assert.Equal(EmploymentStatus.Active, _fakes.Employees["e1"]!.Status);
-    }
-
-    [Fact]
-    public async Task AFeatureTheApiDoesntOfferIsNotFound()
+    public async Task AFeatureTheUiBackendDoesntOfferIsNotFound()
     {
         var handler = await Handle(Lambda.Post("HandleEmployeeLeft", Lambda.Manager, """{"EmployeeId":"e1"}"""));
-        var nothing = await Handle(Lambda.Get("Nothing", Lambda.Manager));
+        var nothing = await Handle(Lambda.Post("Nothing", Lambda.Manager, null));
 
         Assert.Equal((int)HttpStatusCode.NotFound, handler.StatusCode);
         Assert.Equal((int)HttpStatusCode.NotFound, nothing.StatusCode);

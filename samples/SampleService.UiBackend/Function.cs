@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using Amazon.Lambda.APIGatewayEvents;
 using Amazon.Lambda.Core;
 using Amazon.Lambda.Serialization.SystemTextJson;
@@ -15,15 +14,14 @@ using Microsoft.Extensions.DependencyInjection;
 namespace SampleService.UiBackend;
 
 // The backend for the service's own UI: invokes its queries and commands over API Gateway's HTTP API,
-// GET /{feature} for a query, with its arguments in the query string, and POST /{feature} for a command,
-// with its arguments as the JSON body. Its contract is the features themselves, links and result cases
-// included, which suits a UI shipped with the service and no one else.
+// each as POST /{feature} with its arguments as the JSON body, so the UI follows a link the same way
+// whatever it leads to. Its contract is the features themselves, links and result cases included,
+// which suits a UI shipped with the service and no one else.
 public class Function
 {
     private readonly Features _features = new();
-    private readonly Dictionary<string, string> _methodsByFeature = new();
+    private readonly HashSet<string> _offered = [];
     private readonly JsonSerializerOptions _json;
-    private readonly JsonSerializerOptions _queryStringJson;
 
     public Function() : this(Registrations.Aws)
     {
@@ -38,14 +36,12 @@ public class Function
             .RegisterFeature<Fire, Fire.Rule>()
             // Fire queues a link to HandleEmployeeLeft, which the QueueWorker invokes.
             .RegisterLinksTo<HandleEmployeeLeft>();
-        Query<EmployeeDetails>();
-        Query<ReviewsDue>();
-        Command<Hire>();
-        Command<Fire>();
+        Offer<EmployeeDetails>();
+        Offer<ReviewsDue>();
+        Offer<Hire>();
+        Offer<Fire>();
 
         _json = _features.ConfigureJson(new JsonSerializerOptions());
-        // Query strings carry only strings, so numeric arguments are read from them.
-        _queryStringJson = _features.ConfigureJson(new JsonSerializerOptions { NumberHandling = JsonNumberHandling.AllowReadingFromString });
 
         _features
             .RegisterDependencies(services => services.AddSingleton(_json))
@@ -56,10 +52,8 @@ public class Function
     public async Task<APIGatewayHttpApiV2ProxyResponse> Handle(APIGatewayHttpApiV2ProxyRequest request, ILambdaContext context)
     {
         var feature = ValueOf(request.PathParameters, "feature") ?? "";
-        if (!_methodsByFeature.TryGetValue(feature, out var method))
+        if (!_offered.Contains(feature))
             return Problem(HttpStatusCode.NotFound, $"there is no feature named {feature}");
-        if (request.RequestContext.Http.Method != method)
-            return Problem(HttpStatusCode.MethodNotAllowed, $"{feature} is invoked with {method}", ("allow", method));
 
         // HTTP APIs give header names in lower case.
         var idempotencyKey = ValueOf(request.Headers, "idempotency-key");
@@ -69,9 +63,7 @@ public class Function
         Link link;
         try
         {
-            link = method == "GET"
-                ? ReadLink(feature, QueryStringArguments(request.QueryStringParameters), _queryStringJson)
-                : ReadLink(feature, BodyArguments(request), _json);
+            link = ReadLink(feature, BodyArguments(request));
         }
         catch (JsonException e)
         {
@@ -92,34 +84,20 @@ public class Function
         }
     }
 
-    private void Query<TFeature>() => Offer<TFeature>("GET");
-
-    private void Command<TFeature>() => Offer<TFeature>("POST");
-
-    // Offers a registered feature over HTTP, by the method that invokes it.
-    private void Offer<TFeature>(string method)
-    {
-        var name = typeof(TFeature).GetCustomAttribute<FeatureNameAttribute>()?.Name ?? typeof(TFeature).Name;
-        _methodsByFeature.Add(name, method);
-    }
+    // Offers a registered feature to the UI. Links to other features, such as those registered only to
+    // be queued, aren't invoked here.
+    private void Offer<TFeature>() =>
+        _offered.Add(typeof(TFeature).GetCustomAttribute<FeatureNameAttribute>()?.Name ?? typeof(TFeature).Name);
 
     // The path names the feature. Arguments may name it too, but only as the same feature.
-    private static Link ReadLink(string feature, JsonObject arguments, JsonSerializerOptions json)
+    private Link ReadLink(string feature, JsonObject arguments)
     {
         if (arguments.TryGetPropertyValue(Features.FeatureNameProperty, out var named)
             && !(named is JsonValue value && value.TryGetValue<string>(out var name) && name == feature))
             throw new JsonException($"the arguments name a feature other than {feature}");
 
         arguments[Features.FeatureNameProperty] = feature;
-        return arguments.Deserialize<Link>(json) ?? throw new JsonException("the arguments are null");
-    }
-
-    private static JsonObject QueryStringArguments(IDictionary<string, string>? parameters)
-    {
-        var arguments = new JsonObject();
-        foreach (var (name, value) in parameters ?? new Dictionary<string, string>())
-            arguments[name] = value;
-        return arguments;
+        return arguments.Deserialize<Link>(_json) ?? throw new JsonException("the arguments are null");
     }
 
     private static JsonObject BodyArguments(APIGatewayHttpApiV2ProxyRequest request)
