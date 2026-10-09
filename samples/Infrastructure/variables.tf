@@ -26,6 +26,20 @@ variable "jwt_audience" {
   default = []
 }
 
+variable "public_api_auth_domain" {
+  description = "The prefix of the public API's token endpoint domain, which must be unique in the region. Defaults to <name_prefix>-public-api."
+  type        = string
+  default     = null
+}
+
+variable "public_api_clients" {
+  description = "The third-party clients of the public API, each mapped to the scopes it's granted."
+  type        = map(list(string))
+  default = {
+    example-partner = ["hr/employees.read"]
+  }
+}
+
 variable "directory_events_topic_arn" {
   description = "The directory service's SNS topic, whose AccountDeactivated events the queue worker handles."
   type        = string

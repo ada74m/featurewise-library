@@ -8,6 +8,7 @@ A small HR service built with Featurewise: managers hire, fire and review their 
 |---|---|
 | `SampleService` | The core: employees, the features with the rules about who may invoke them nested in them, and the services they depend on (a DynamoDB store, a work queue on SQS, a notifier that logs). |
 | `SampleService.UiBackend` | The backend for the service's own UI, on API Gateway's HTTP API. Its contract is the features themselves, links and result cases included, so it serves only a UI shipped with the service. `POST /{feature}` invokes a query or a command with its arguments as the JSON body, so the UI follows any link the same way. The caller comes from the JWT authorizer's claims, and an `Idempotency-Key` header becomes the invocation's idempotency key. |
+| `SampleService.PublicApi` | The API for other organisations' systems, on API Gateway's HTTP API. Its contract is its own, in `openapi.yaml`: versioned resources (`GET /v1/employees/{employeeId}`), HTTP status codes for outcomes, RFC 9457 problems for errors, and public shapes without links, result cases or internal fields. Clients authenticate with OAuth client credentials from a Cognito user pool of their own, and the rule for each feature checks the token's scopes. |
 | `SampleService.ScheduledWorker` | EventBridge Scheduler. Each schedule's input carries its job's link, so one function runs every job, as a `SystemCaller` named after the schedule. |
 | `SampleService.QueueWorker` | SQS. A message is either a link the service sent itself, or an event from another service's SNS topic, which an adapter for that topic turns into a link. Failed messages are retried alone, then dead-lettered. |
 | `SampleService.Tests` | Tests of the core's features, and of each entrypoint fed the events AWS would send it. |
@@ -23,7 +24,7 @@ Each project keeps the Terraform for its own resources in its `Infrastructure` f
 Publish each function, then plan from the root module:
 
 ```
-for project in UiBackend ScheduledWorker QueueWorker; do
+for project in UiBackend PublicApi ScheduledWorker QueueWorker; do
   dotnet publish samples/SampleService.$project -c Release -r linux-arm64 --self-contained false \
     -o samples/artifacts/SampleService.$project
 done
@@ -33,4 +34,4 @@ terraform init
 terraform plan -var jwt_issuer=https://cognito-idp.eu-west-2.amazonaws.com/<user pool> -var 'jwt_audience=["<app client>"]'
 ```
 
-Without `jwt_issuer`, every UI backend caller is anonymous, and every feature the UI backend offers refuses them. Without `directory_events_topic_arn`, the queue worker subscribes to no other service's events. State is local until a backend is configured in `Infrastructure/versions.tf`.
+Without `jwt_issuer`, every UI backend caller is anonymous, and every feature the UI backend offers refuses them. `public_api_clients` lists the public API's third-party clients and their scopes; `terraform output -json public_api_clients` gives each one's id and secret, and `public_api_token_url` is where they trade them for a token. The public API throttles all clients together; quotas per client would need API keys on a REST API, or WAF rules. Without `directory_events_topic_arn`, the queue worker subscribes to no other service's events. State is local until a backend is configured in `Infrastructure/versions.tf`.

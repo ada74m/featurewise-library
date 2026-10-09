@@ -36,6 +36,17 @@ module "ui_backend" {
   jwt_audience          = var.jwt_audience
 }
 
+module "public_api" {
+  source = "../SampleService.PublicApi/Infrastructure"
+
+  name_prefix                = var.name_prefix
+  publish_dir                = "${local.artifacts_dir}/SampleService.PublicApi"
+  employees_table_name       = module.core.employees_table_name
+  employees_read_policy_json = module.core.employees_read_policy_json
+  auth_domain                = coalesce(var.public_api_auth_domain, "${var.name_prefix}-public-api")
+  clients                    = var.public_api_clients
+}
+
 module "scheduled_worker" {
   source = "../SampleService.ScheduledWorker/Infrastructure"
 

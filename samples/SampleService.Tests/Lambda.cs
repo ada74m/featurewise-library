@@ -35,6 +35,31 @@ public static class Lambda
             }
         };
 
+    // Access-token claims for third-party clients, as API Gateway's JWT authorizer passes them: one
+    // granted the public API's read scope, and one granted something else.
+    public static readonly Dictionary<string, string> Partner = new() { ["client_id"] = "partner", ["scope"] = "hr/employees.read" };
+
+    public static readonly Dictionary<string, string> PartnerWithoutScope = new() { ["client_id"] = "partner", ["scope"] = "hr/other.read" };
+
+    // A request to one of the public API's routes, such as "GET /v1/employees/{employeeId}".
+    public static APIGatewayHttpApiV2ProxyRequest Route(
+        string routeKey, Dictionary<string, string>? pathParameters, Dictionary<string, string>? claims) =>
+        new()
+        {
+            RouteKey = routeKey,
+            PathParameters = pathParameters,
+            RequestContext = new APIGatewayHttpApiV2ProxyRequest.ProxyRequestContext
+            {
+                Http = new APIGatewayHttpApiV2ProxyRequest.HttpDescription { Method = routeKey.Split(' ')[0] },
+                Authorizer = claims is null
+                    ? null
+                    : new APIGatewayHttpApiV2ProxyRequest.AuthorizerDescription
+                    {
+                        Jwt = new APIGatewayHttpApiV2ProxyRequest.AuthorizerDescription.JwtDescription { Claims = claims }
+                    }
+            }
+        };
+
     public static SQSEvent Messages(params (string Id, string Body)[] messages) =>
         new() { Records = messages.Select(m => new SQSEvent.SQSMessage { MessageId = m.Id, Body = m.Body }).ToList() };
 

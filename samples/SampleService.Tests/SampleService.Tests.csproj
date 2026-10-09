@@ -13,6 +13,7 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
         <PackageReference Include="xunit" Version="2.9.3" />
         <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+        <PackageReference Include="YamlDotNet" Version="18.1.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -20,6 +21,11 @@
         <ProjectReference Include="..\SampleService.UiBackend\SampleService.UiBackend.csproj" />
         <ProjectReference Include="..\SampleService.ScheduledWorker\SampleService.ScheduledWorker.csproj" />
         <ProjectReference Include="..\SampleService.QueueWorker\SampleService.QueueWorker.csproj" />
+        <ProjectReference Include="..\SampleService.PublicApi\SampleService.PublicApi.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\SampleService.PublicApi\openapi.yaml" Link="openapi.yaml" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

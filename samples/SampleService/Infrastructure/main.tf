@@ -22,3 +22,11 @@ data "aws_iam_policy_document" "employees" {
     resources = [aws_dynamodb_table.employees.arn]
   }
 }
+
+# Only what DynamoEmployeeStore does to read, for functions that never write.
+data "aws_iam_policy_document" "employees_read" {
+  statement {
+    actions   = ["dynamodb:GetItem", "dynamodb:Scan"]
+    resources = [aws_dynamodb_table.employees.arn]
+  }
+}

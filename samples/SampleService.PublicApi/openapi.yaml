@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info:
+  title: SampleService public API
+  version: 1.0.0
+  description: >
+    Read access to employees for other organisations' systems. Clients authenticate with OAuth 2.0
+    client credentials and send the access token as a bearer token.
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com
+    variables:
+      apiId:
+        default: example
+      region:
+        default: eu-west-2
+security:
+  - clientCredentials: [hr/employees.read]
+paths:
+  /v1/employees/{employeeId}:
+    get:
+      operationId: getEmployee
+      summary: An employee
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The employee.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: There is no such employee.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  securitySchemes:
+    clientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://example.auth.eu-west-2.amazoncognito.com/oauth2/token
+          scopes:
+            hr/employees.read: Read employees
+  responses:
+    Unauthorized:
+      description: The request has no valid access token.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Forbidden:
+      description: The access token doesn't grant the operation's scope.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Employee:
+      type: object
+      required: [id, name, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        managerId:
+          type: string
+          description: Absent for someone with no manager.
+        status:
+          type: string
+          enum: [active, left]
+        leftOn:
+          type: string
+          format: date
+          description: The day they left. Absent while they're active.
+    Problem:
+      description: An error, as RFC 9457 describes.
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
