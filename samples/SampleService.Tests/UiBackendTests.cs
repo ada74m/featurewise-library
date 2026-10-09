@@ -1,16 +1,16 @@
 ﻿using System.Net;
 using System.Text.Json.Nodes;
 using Amazon.Lambda.APIGatewayEvents;
-using SampleService.Api;
+using SampleService.UiBackend;
 
 namespace SampleService.Tests;
 
-public class ApiTests
+public class UiBackendTests
 {
     private readonly Fakes _fakes = new Fakes().WithStaff();
-    private readonly Function _api;
+    private readonly Function _uiBackend;
 
-    public ApiTests() => _api = new Function(_fakes.Register);
+    public UiBackendTests() => _uiBackend = new Function(_fakes.Register);
 
     [Fact]
     public async Task AQueryIsInvokedByGetWithItsArgumentsInTheQueryString()
@@ -104,5 +104,5 @@ public class ApiTests
     }
 
     private Task<APIGatewayHttpApiV2ProxyResponse> Handle(APIGatewayHttpApiV2ProxyRequest request) =>
-        _api.Handle(request, Lambda.Context());
+        _uiBackend.Handle(request, Lambda.Context());
 }

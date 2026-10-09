@@ -23,11 +23,11 @@ module "queue_worker" {
   }
 }
 
-module "api" {
-  source = "../SampleService.Api/Infrastructure"
+module "ui_backend" {
+  source = "../SampleService.UiBackend/Infrastructure"
 
   name_prefix           = var.name_prefix
-  publish_dir           = "${local.artifacts_dir}/SampleService.Api"
+  publish_dir           = "${local.artifacts_dir}/SampleService.UiBackend"
   employees_table_name  = module.core.employees_table_name
   employees_policy_json = module.core.employees_policy_json
   work_queue_url        = module.queue_worker.work_queue_url

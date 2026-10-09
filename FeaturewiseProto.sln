@@ -10,7 +10,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleService", "samples\Sa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleService.Tests", "samples\SampleService.Tests\SampleService.Tests.csproj", "{04E15B72-842E-4B11-AEB7-912FEFB9641C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleService.Api", "samples\SampleService.Api\SampleService.Api.csproj", "{E0BF439C-BFCA-4373-9598-500A93A4EFA9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleService.UiBackend", "samples\SampleService.UiBackend\SampleService.UiBackend.csproj", "{E0BF439C-BFCA-4373-9598-500A93A4EFA9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleService.ScheduledWorker", "samples\SampleService.ScheduledWorker\SampleService.ScheduledWorker.csproj", "{EF5EA272-B2F7-41BD-9C84-878A27FE0046}"
 EndProject

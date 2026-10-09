@@ -1,5 +1,5 @@
-output "api_url" {
-  value = module.api.api_url
+output "ui_backend_url" {
+  value = module.ui_backend.url
 }
 
 output "work_queue_url" {

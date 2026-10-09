@@ -1,4 +1,4 @@
-# The API: an HTTP API whose two routes, GET and POST /{feature}, reach one function.
+# The UI backend: an HTTP API whose two routes, GET and POST /{feature}, reach one function.
 
 data "aws_iam_policy_document" "function" {
   source_policy_documents = [var.employees_policy_json]
@@ -12,9 +12,9 @@ data "aws_iam_policy_document" "function" {
 module "function" {
   source = "../../Infrastructure/modules/lambda-function"
 
-  name        = "${var.name_prefix}-api"
+  name        = "${var.name_prefix}-ui-backend"
   publish_dir = var.publish_dir
-  handler     = "SampleService.Api::SampleService.Api.Function::Handle"
+  handler     = "SampleService.UiBackend::SampleService.UiBackend.Function::Handle"
   policy_json = data.aws_iam_policy_document.function.json
   environment = {
     EMPLOYEES_TABLE = var.employees_table_name
@@ -23,7 +23,7 @@ module "function" {
 }
 
 resource "aws_apigatewayv2_api" "api" {
-  name          = "${var.name_prefix}-api"
+  name          = "${var.name_prefix}-ui-backend"
   protocol_type = "HTTP"
 }
 

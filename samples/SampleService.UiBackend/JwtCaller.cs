@@ -1,11 +1,11 @@
 ﻿using System.Security.Claims;
 using Amazon.Lambda.APIGatewayEvents;
 
-namespace SampleService.Api;
+namespace SampleService.UiBackend;
 
-// The caller of an API request, from the claims that API Gateway's JWT authorizer has verified. Without
+// The caller of a request, from the claims that API Gateway's JWT authorizer has verified. Without
 // an authorizer, or without a token, the caller is anonymous.
-public static class ApiCaller
+public static class JwtCaller
 {
     public static ClaimsPrincipal From(APIGatewayHttpApiV2ProxyRequest request)
     {

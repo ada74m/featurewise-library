@@ -62,10 +62,10 @@ public class QueueWorkerTests
     }
 
     [Fact]
-    public async Task ALinkFiredThroughTheApiIsHandledByTheQueueWorker()
+    public async Task AFiringThroughTheUiBackendIsHandledByTheQueueWorker()
     {
-        var api = new Api.Function(_fakes.Register);
-        await api.Handle(Lambda.Post("Fire", Lambda.Manager, """{"EmployeeId":"e1"}"""), Lambda.Context());
+        var uiBackend = new UiBackend.Function(_fakes.Register);
+        await uiBackend.Handle(Lambda.Post("Fire", Lambda.Manager, """{"EmployeeId":"e1"}"""), Lambda.Context());
 
         var response = await _worker.Handle(Lambda.Messages(("m-1", Assert.Single(_fakes.QueuedMessages))), Lambda.Context());
 

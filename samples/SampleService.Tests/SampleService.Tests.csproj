@@ -17,7 +17,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\SampleService\SampleService.csproj" />
-        <ProjectReference Include="..\SampleService.Api\SampleService.Api.csproj" />
+        <ProjectReference Include="..\SampleService.UiBackend\SampleService.UiBackend.csproj" />
         <ProjectReference Include="..\SampleService.ScheduledWorker\SampleService.ScheduledWorker.csproj" />
         <ProjectReference Include="..\SampleService.QueueWorker\SampleService.QueueWorker.csproj" />
     </ItemGroup>

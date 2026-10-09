@@ -16,7 +16,7 @@ variable "artifacts_dir" {
 }
 
 variable "jwt_issuer" {
-  description = "The issuer of API callers' tokens, such as a Cognito user pool's URL. Without one, every API caller is anonymous."
+  description = "The issuer of UI backend callers' tokens, such as a Cognito user pool's URL. Without one, every UI backend caller is anonymous."
   type        = string
   default     = null
 }

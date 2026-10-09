@@ -12,11 +12,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 [assembly: LambdaSerializer(typeof(DefaultLambdaJsonSerializer))]
 
-namespace SampleService.Api;
+namespace SampleService.UiBackend;
 
-// Invokes the service's queries and commands over API Gateway's HTTP API: GET /{feature} for a query,
-// with its arguments in the query string, and POST /{feature} for a command, with its arguments as the
-// JSON body.
+// The backend for the service's own UI: invokes its queries and commands over API Gateway's HTTP API,
+// GET /{feature} for a query, with its arguments in the query string, and POST /{feature} for a command,
+// with its arguments as the JSON body. Its contract is the features themselves, links and result cases
+// included, which suits a UI shipped with the service and no one else.
 public class Function
 {
     private readonly Features _features = new();
@@ -80,7 +81,7 @@ public class Function
         using var timeout = new CancellationTokenSource(context.RemainingTime - TimeSpan.FromSeconds(1));
         try
         {
-            var result = await _features.Invoke(link, ApiCaller.From(request), idempotencyKey, timeout.Token);
+            var result = await _features.Invoke(link, JwtCaller.From(request), idempotencyKey, timeout.Token);
             return Response(HttpStatusCode.OK, JsonSerializer.Serialize(result, _json));
         }
         catch (InvocationDeniedException denied)

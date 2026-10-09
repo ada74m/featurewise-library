@@ -1,3 +1,3 @@
-output "api_url" {
+output "url" {
   value = aws_apigatewayv2_stage.default.invoke_url
 }
