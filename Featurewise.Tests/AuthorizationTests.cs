@@ -11,8 +11,7 @@ public class AuthorizationTests
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         var denied = await Assert.ThrowsAsync<InvocationDeniedException>(
@@ -30,8 +29,7 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>();
+            .RegisterFeature<Fire, FireAuthorization>();
 
         var denied = await Assert.ThrowsAsync<InvocationDeniedException>(
             () => features.Invoke(new Fire.Args("e1"), Callers.Anonymous));
@@ -44,28 +42,32 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>();
+            .RegisterFeature<Fire, FireAuthorization>();
 
         await Assert.ThrowsAsync<InvocationDeniedException>(
             () => features.Invoke(new Fire.Args("manager"), Callers.Manager));
     }
 
     [Fact]
-    public async Task AFeatureWithNoRuleIsDeniedToEveryone()
+    public async Task AFeatureWithSeveralRulesAdmitsAnyoneOneOfThemApproves()
     {
         await using var features = new Features();
-        features.RegisterFeature<Fire>();
+        features.RegisterFeature<Fire, FireAuthorization, AnySystemCaller<Fire.Args>>();
 
+        var byManager = await features.Invoke(new Fire.Args("e1"), Callers.Manager);
+        var byJob = await features.Invoke(new Fire.Args("e2"), SystemCaller.For("nightly-reminders"));
         await Assert.ThrowsAsync<InvocationDeniedException>(
-            () => features.Invoke(new Fire.Args("e1"), Callers.Manager));
+            () => features.Invoke(new Fire.Args("e3"), Callers.Employee));
+
+        Assert.IsType<Fire.Result.Fired>(byManager);
+        Assert.IsType<Fire.Result.Fired>(byJob);
     }
 
     [Fact]
-    public async Task AFeatureThatAllowsAnonymousCallersNeedsNoRule()
+    public async Task AnyCallerAdmitsAnonymousCallers()
     {
         await using var features = new Features();
-        features.RegisterFeature<WhoAmI>();
+        features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>();
 
         Assert.Null(await features.Invoke(new WhoAmI.Args(), Callers.Anonymous));
     }
@@ -74,7 +76,7 @@ public class AuthorizationTests
     public async Task AFeatureCanTakeItsCallerAsADependency()
     {
         await using var features = new Features();
-        features.RegisterFeature<WhoAmI>();
+        features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>();
 
         Assert.Equal("manager", await features.Invoke(new WhoAmI.Args(), Callers.Manager));
     }
@@ -84,9 +86,8 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<EmployeeReview>()
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>();
+            .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
+            .RegisterFeature<Fire, FireAuthorization>();
 
         var managersReview = await features.Invoke(new EmployeeReview.Args("e1"), Callers.Manager);
         var employeesReview = await features.Invoke(new EmployeeReview.Args("e1"), Callers.Employee);
@@ -100,9 +101,8 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<EmployeeReview>()
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>();
+            .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
+            .RegisterFeature<Fire, FireAuthorization>();
 
         var offered = (await features.Invoke(new EmployeeReview.Args("e1"), Callers.Manager)).LinkToFire!;
 
@@ -114,8 +114,7 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<AnySignedInCaller<Fire.Args>>();
+            .RegisterFeature<Fire, AnySignedInCaller<Fire.Args>>();
 
         var result = await features.Invoke(new Fire.Args("e1"), Callers.Employee);
         var denied = await Assert.ThrowsAsync<InvocationDeniedException>(
@@ -130,10 +129,8 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<EmployeeReview>()
-            .RegisterAuthorizationHandler<AnySignedInCaller<EmployeeReview.Args>>()
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>();
+            .RegisterFeature<EmployeeReview, AnySignedInCaller<EmployeeReview.Args>>()
+            .RegisterFeature<Fire, FireAuthorization>();
 
         await Assert.ThrowsAsync<InvocationDeniedException>(
             () => features.Invoke(new Fire.Args("e1"), Callers.Employee));
@@ -156,8 +153,7 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<AnySignedInCaller<Fire.Args>>();
+            .RegisterFeature<Fire, AnySignedInCaller<Fire.Args>>();
 
         var result = await features.Invoke(new Fire.Args("e1"), SystemCaller.For("nightly-reminders"));
 
@@ -169,8 +165,38 @@ public class AuthorizationTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>();
+            .RegisterFeature<Fire, FireAuthorization>();
+
+        await Assert.ThrowsAsync<InvocationDeniedException>(
+            () => features.Invoke(new Fire.Args("e1"), SystemCaller.For("nightly-reminders")));
+    }
+
+    [Fact]
+    public async Task AnySystemCallerAdmitsSystemCallersOnly()
+    {
+        await using var features = new Features();
+        features
+            .RegisterFeature<Fire, AnySystemCaller<Fire.Args>>();
+
+        var result = await features.Invoke(new Fire.Args("e1"), SystemCaller.For("nightly-reminders"));
+        var signedIn = await Assert.ThrowsAsync<InvocationDeniedException>(
+            () => features.Invoke(new Fire.Args("e1"), Callers.Manager));
+        var anonymous = await Assert.ThrowsAsync<InvocationDeniedException>(
+            () => features.Invoke(new Fire.Args("e1"), Callers.Anonymous));
+
+        Assert.IsType<Fire.Result.Fired>(result);
+        Assert.True(signedIn.CallerAuthenticated);
+        Assert.False(anonymous.CallerAuthenticated);
+    }
+
+    [Fact]
+    public async Task AnySystemCallerAppliesOnlyToItsOwnLinkType()
+    {
+        await using var features = new Features();
+        features
+            .RegisterFeature<Remind, AnySystemCaller<Remind.Args>>()
+            .RegisterDependencies(s => s.AddSingleton<SentReminders>())
+            .RegisterFeature<Fire, FireAuthorization>();
 
         await Assert.ThrowsAsync<InvocationDeniedException>(
             () => features.Invoke(new Fire.Args("e1"), SystemCaller.For("nightly-reminders")));
@@ -182,8 +208,7 @@ public class AuthorizationTests
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<BrokenFireAuthorization>()
+            .RegisterFeature<Fire, BrokenFireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -200,8 +225,7 @@ public class AuthorizationTests
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<SlowFireAuthorization>()
+            .RegisterFeature<Fire, SlowFireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
 
@@ -218,8 +242,7 @@ public class AuthorizationTests
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         await Assert.ThrowsAsync<InvocationDeniedException>(() => features.Invoke(new Fire.Args("e1"), Callers.Employee));

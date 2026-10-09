@@ -17,8 +17,7 @@ public class HostingTests
     {
         var services = new ServiceCollection();
         services.AddFeatures(features => features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>());
+            .RegisterFeature<Fire, FireAuthorization>());
         await using var host = BuildHost(services);
 
         var result = await host.GetRequiredService<Features>().Invoke(new Fire.Args("e1"), Callers.Manager);
@@ -31,7 +30,7 @@ public class HostingTests
     {
         var services = new ServiceCollection();
         services.AddScoped<ScopeProbe>();
-        services.AddFeatures(features => features.RegisterFeature<Probe>());
+        services.AddFeatures(features => features.RegisterFeature<Probe, AnyCaller<Probe.Args>>());
         await using var host = BuildHost(services);
         var features = host.GetRequiredService<Features>();
 
@@ -52,7 +51,7 @@ public class HostingTests
         var logs = new CapturingLoggerProvider();
         var services = new ServiceCollection();
         services.AddLogging(b => b.AddProvider(logs));
-        services.AddFeatures(features => features.RegisterFeature<WhoAmI>());
+        services.AddFeatures(features => features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>());
         await using var host = BuildHost(services);
 
         await host.GetRequiredService<Features>().Invoke(new WhoAmI.Args(), Callers.Manager);
@@ -65,7 +64,7 @@ public class HostingTests
     {
         var services = new ServiceCollection();
         services.AddScoped(_ => Callers.Employee);
-        services.AddFeatures(features => features.RegisterFeature<WhoAmI>());
+        services.AddFeatures(features => features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>());
         await using var host = BuildHost(services);
 
         var invokedAs = await host.GetRequiredService<Features>().Invoke(new WhoAmI.Args(), Callers.Manager);
@@ -79,8 +78,8 @@ public class HostingTests
     public async Task RegistrationsFromSeveralAddFeaturesCallsAccumulate()
     {
         var services = new ServiceCollection();
-        services.AddFeatures(features => features.RegisterFeature<WhoAmI>());
-        services.AddFeatures(features => features.RegisterFeature<TossCoin>());
+        services.AddFeatures(features => features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>());
+        services.AddFeatures(features => features.RegisterFeature<TossCoin, AnyCaller<TossCoin.Args>>());
         await using var host = BuildHost(services);
         var features = host.GetRequiredService<Features>();
 
@@ -93,11 +92,11 @@ public class HostingTests
     public async Task AHostedFeaturesCannotRegister()
     {
         var services = new ServiceCollection();
-        services.AddFeatures(features => features.RegisterFeature<WhoAmI>());
+        services.AddFeatures(features => features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>());
         await using var host = BuildHost(services);
         var features = host.GetRequiredService<Features>();
 
-        Assert.Throws<InvalidOperationException>(() => features.RegisterFeature<Fire>());
+        Assert.Throws<InvalidOperationException>(() => features.RegisterFeature<Fire, FireAuthorization>());
         Assert.Throws<InvalidOperationException>(() => features.RegisterDependencies(_ => { }));
         Assert.Throws<InvalidOperationException>(() => features.UseLoggerFactory(NullLoggerFactory.Instance));
     }
@@ -107,9 +106,8 @@ public class HostingTests
     {
         var services = new ServiceCollection();
         services.AddFeatures(features => features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
-            .RegisterFeature<Escalate>());
+            .RegisterFeature<Fire, FireAuthorization>()
+            .RegisterFeature<Escalate, AnyCaller<Escalate.Args>>());
         await using var host = BuildHost(services);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -120,7 +118,7 @@ public class HostingTests
     public async Task AHostedFeaturesSerializesLinksToItsFeatures()
     {
         var services = new ServiceCollection();
-        services.AddFeatures(features => features.RegisterFeature<Fire>());
+        services.AddFeatures(features => features.RegisterFeature<Fire, FireAuthorization>());
         await using var host = BuildHost(services);
         var options = host.GetRequiredService<Features>().ConfigureJson(new JsonSerializerOptions());
 
@@ -133,7 +131,7 @@ public class HostingTests
     public async Task BuildingAHostedFeaturesDoesNothing()
     {
         var services = new ServiceCollection();
-        services.AddFeatures(features => features.RegisterFeature<WhoAmI>());
+        services.AddFeatures(features => features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>());
         await using var host = BuildHost(services);
         var features = host.GetRequiredService<Features>();
 
@@ -145,7 +143,7 @@ public class HostingTests
     public async Task OutsideAnInvocationThereIsNoCaller()
     {
         var services = new ServiceCollection();
-        services.AddFeatures(features => features.RegisterFeature<WhoAmI>());
+        services.AddFeatures(features => features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>());
         await using var host = BuildHost(services);
         await using var requestScope = host.CreateAsyncScope();
 

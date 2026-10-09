@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-
-namespace Featurewise.Tests;
+﻿namespace Featurewise.Tests;
 
 // Has a result with a sealed case, so tests can see how sealed cases are serialized.
-[AllowAnonymous]
 public class TossCoin : Feature<TossCoin, TossCoin.Args, TossCoin.Result>
 {
     public record Args : Link<TossCoin, Result>;

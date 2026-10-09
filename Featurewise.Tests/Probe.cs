@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿namespace Featurewise.Tests;
 
-namespace Featurewise.Tests;
-
-[AllowAnonymous]
 public class Probe : Feature<Probe, Probe.Args, ScopeProbe>
 {
     public record Args : Link<Probe, ScopeProbe>;

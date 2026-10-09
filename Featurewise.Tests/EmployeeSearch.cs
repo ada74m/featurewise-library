@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-
-namespace Featurewise.Tests;
+﻿namespace Featurewise.Tests;
 
 // Has required, nullable and defaulted arguments, so tests can see which a link's JSON must supply.
-[AllowAnonymous]
 public class EmployeeSearch : Feature<EmployeeSearch, EmployeeSearch.Args, string>
 {
     public record Args(string Query, int Limit, string? Department, int? Grade, int Page = 1)

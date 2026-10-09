@@ -36,10 +36,8 @@ public class Function
             .ToDictionary(pair => pair[0], pair => Adapters[pair[1]]);
 
         _features
-            .RegisterFeature<HandleEmployeeLeft>()
-            .RegisterFeature<HandleAccountDeactivated>()
-            .RegisterAuthorizationHandler<AnySystemCaller<HandleEmployeeLeft.Args>>()
-            .RegisterAuthorizationHandler<AnySystemCaller<HandleAccountDeactivated.Args>>();
+            .RegisterFeature<HandleEmployeeLeft, AnySystemCaller<HandleEmployeeLeft.Args>>()
+            .RegisterFeature<HandleAccountDeactivated, AnySystemCaller<HandleAccountDeactivated.Args>>();
 
         _json = _features.ConfigureJson(new JsonSerializerOptions());
 

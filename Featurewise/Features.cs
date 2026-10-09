@@ -24,7 +24,7 @@ namespace Featurewise;
 /// </description></item>
 /// <item><description>
 /// Standalone, as in a console tool or a test: create one with <see cref="Features()"/>, register
-/// features with <see cref="RegisterFeature{TFeature}"/> and everything they depend on with
+/// features with <see cref="RegisterFeature{TFeature, TRule}"/> and everything they depend on with
 /// <see cref="RegisterDependencies"/> and <see cref="UseLoggerFactory"/>, then call
 /// <see cref="Invoke{TResult}(Link{TResult}, ClaimsPrincipal, CancellationToken)"/>.
 /// <see cref="Build"/>, or else the first invocation, builds its container and closes registration.
@@ -41,9 +41,9 @@ namespace Featurewise;
 /// into its JSON so that it can be read back through any base type.
 /// </para>
 /// <para>
-/// Every invocation has a caller, and is refused unless an authorization handler registered with
-/// <see cref="RegisterAuthorizationHandler{THandler}"/> approves the link for that caller, or the
-/// feature has <see cref="AllowAnonymousAttribute"/>. See <see cref="InvokeRequirement"/>.
+/// Every invocation has a caller, and is refused unless one of the rules its feature was registered
+/// with approves the link for that caller. See <see cref="RegisterFeature{TFeature, TRule}"/> and
+/// <see cref="InvokeRequirement"/>.
 /// </para>
 /// <para>
 /// Features don't invoke other features, directly or through <see cref="Features"/>. A feature that
@@ -54,8 +54,7 @@ namespace Featurewise;
 /// <code>
 /// await using var features = new Features();
 /// features
-///     .RegisterFeature&lt;Fire&gt;()
-///     .RegisterAuthorizationHandler&lt;FireAuthorization&gt;()
+///     .RegisterFeature&lt;Fire, Fire.Rule&gt;()
 ///     .RegisterDependencies(services =&gt; services.AddScoped&lt;IEmployeeStore, SqlEmployeeStore&gt;())
 ///     .UseLoggerFactory(hostLoggerFactory);
 ///
@@ -146,25 +145,74 @@ public class Features : IDisposable, IAsyncDisposable
 
     private IServiceProvider Provider => _hostProvider ?? _ownProvider!.Value;
 
-    /// <summary>Registers a feature in a standalone <see cref="Features"/>, so that links to it can be invoked.</summary>
+    /// <summary>
+    /// Registers a feature in a standalone <see cref="Features"/>, and the rule that says who may invoke it.
+    /// </summary>
     /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TRule">
+    /// An authorization handler for <see cref="InvokeRequirement"/> whose resource is the feature's
+    /// arguments type, or a base of it; see <see cref="FeaturesBuilder.RegisterFeature{TFeature, TRule}"/>.
+    /// </typeparam>
     /// <returns>This instance, so that calls can be chained.</returns>
     /// <remarks>
-    /// This registers the feature as <see cref="FeaturesBuilder.RegisterFeature{TFeature}"/> does, and
-    /// building the container checks every registration, so a service or feature that depends on a
+    /// This registers the feature as <see cref="FeaturesBuilder.RegisterFeature{TFeature, TRule}"/> does,
+    /// and building the container checks every registration, so a service or feature that depends on a
     /// feature fails the first invocation.
     /// </remarks>
     /// <exception cref="ArgumentException">
     /// <typeparamref name="TFeature"/> doesn't derive from <see cref="Feature{TFeature, TArgs, TResult}"/>
-    /// with itself as the first type argument.
+    /// with itself as the first type argument; a rule isn't an
+    /// <see cref="AuthorizationHandler{TRequirement, TResource}"/> for <see cref="InvokeRequirement"/>
+    /// and the feature's arguments; or the feature has <see cref="AllowAnonymousAttribute"/>, which
+    /// Featurewise doesn't honour: register <see cref="AnyCaller{TArgs}"/> instead.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// <typeparamref name="TFeature"/> is already registered, another registered feature has the same
     /// name, registration is closed, or this <see cref="Features"/> is hosted.
     /// </exception>
-    public Features RegisterFeature<TFeature>() where TFeature : class
+    public Features RegisterFeature<TFeature, TRule>()
+        where TFeature : class
+        where TRule : class, IAuthorizationHandler
     {
-        EnsureRegistrationOpen().RegisterFeature<TFeature>();
+        EnsureRegistrationOpen().RegisterFeature<TFeature, TRule>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a feature in a standalone <see cref="Features"/>, and two rules that each say who may invoke it.
+    /// </summary>
+    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
+    /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
+    /// <returns>This instance, so that calls can be chained.</returns>
+    /// <remarks>The feature may be invoked by anyone either rule approves.</remarks>
+    /// <inheritdoc cref="RegisterFeature{TFeature, TRule}" path="/exception"/>
+    public Features RegisterFeature<TFeature, TRule1, TRule2>()
+        where TFeature : class
+        where TRule1 : class, IAuthorizationHandler
+        where TRule2 : class, IAuthorizationHandler
+    {
+        EnsureRegistrationOpen().RegisterFeature<TFeature, TRule1, TRule2>();
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a feature in a standalone <see cref="Features"/>, and three rules that each say who may invoke it.
+    /// </summary>
+    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
+    /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
+    /// <typeparam name="TRule3">Another rule for the feature.</typeparam>
+    /// <returns>This instance, so that calls can be chained.</returns>
+    /// <remarks>The feature may be invoked by anyone any of the rules approves.</remarks>
+    /// <inheritdoc cref="RegisterFeature{TFeature, TRule}" path="/exception"/>
+    public Features RegisterFeature<TFeature, TRule1, TRule2, TRule3>()
+        where TFeature : class
+        where TRule1 : class, IAuthorizationHandler
+        where TRule2 : class, IAuthorizationHandler
+        where TRule3 : class, IAuthorizationHandler
+    {
+        EnsureRegistrationOpen().RegisterFeature<TFeature, TRule1, TRule2, TRule3>();
         return this;
     }
 
@@ -206,24 +254,6 @@ public class Features : IDisposable, IAsyncDisposable
     public Features RegisterDependencies(Action<IServiceCollection> register)
     {
         register(EnsureRegistrationOpen().Services);
-        return this;
-    }
-
-    /// <summary>
-    /// Registers an authorization handler in a standalone <see cref="Features"/>, which says who may
-    /// invoke links to some features.
-    /// </summary>
-    /// <typeparam name="THandler">
-    /// An authorization handler for <see cref="InvokeRequirement"/>; see
-    /// <see cref="FeaturesBuilder.RegisterAuthorizationHandler{THandler}"/>.
-    /// </typeparam>
-    /// <returns>This instance, so that calls can be chained.</returns>
-    /// <exception cref="InvalidOperationException">
-    /// Registration is closed, or this <see cref="Features"/> is hosted.
-    /// </exception>
-    public Features RegisterAuthorizationHandler<THandler>() where THandler : class, IAuthorizationHandler
-    {
-        EnsureRegistrationOpen().RegisterAuthorizationHandler<THandler>();
         return this;
     }
 
@@ -289,7 +319,7 @@ public class Features : IDisposable, IAsyncDisposable
     /// <remarks>
     /// <para>
     /// A link's JSON names its feature in a <see cref="FeatureNameProperty"/> property, using the name
-    /// given at <see cref="RegisterFeature{TFeature}"/>. Reading a link through a base type requires
+    /// given at <see cref="RegisterFeature{TFeature, TRule}"/>. Reading a link through a base type requires
     /// that property, and accepts it anywhere in the object.
     /// </para>
     /// <para>
@@ -392,9 +422,8 @@ public class Features : IDisposable, IAsyncDisposable
     /// describes the invocation, including <paramref name="caller"/>.
     /// </para>
     /// <para>
-    /// Before the feature is resolved, the invocation is refused unless the feature has
-    /// <see cref="AllowAnonymousAttribute"/> or an authorization handler approves the link for
-    /// <paramref name="caller"/>. A refusal is logged as a warning, naming the caller. A handler that
+    /// Before the feature is resolved, the invocation is refused unless one of the feature's rules
+    /// approves the link for <paramref name="caller"/>. A refusal is logged as a warning, naming the caller. A handler that
     /// throws or is cancelled fails or cancels the invocation, as the feature would.
     /// </para>
     /// <para>

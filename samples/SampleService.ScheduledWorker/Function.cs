@@ -19,10 +19,8 @@ public class Function
     public Function(Action<IServiceCollection> registerDependencies)
     {
         _features
-            .RegisterFeature<SendReviewReminders>()
-            .RegisterFeature<ArchiveLeavers>()
-            .RegisterAuthorizationHandler<AnySystemCaller<SendReviewReminders.Args>>()
-            .RegisterAuthorizationHandler<AnySystemCaller<ArchiveLeavers.Args>>();
+            .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>()
+            .RegisterFeature<ArchiveLeavers, AnySystemCaller<ArchiveLeavers.Args>>();
 
         _json = _features.ConfigureJson(new JsonSerializerOptions());
 

@@ -1,10 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
-
-namespace Featurewise.Tests;
+﻿namespace Featurewise.Tests;
 
 // Sends a reminder once per request, recognising redeliveries by their idempotency key, as a
 // repeatable command or event handler would.
-[AllowAnonymous]
 public class Remind(SentReminders sent, Invocation invocation) : Feature<Remind, Remind.Args, Remind.Result>
 {
     public record Args(string EmployeeId) : Link<Remind, Result>;

@@ -11,7 +11,7 @@ public class IdempotencyTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Remind>()
+            .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>());
 
         var withKey = await features.Invoke(new Remind.Args("e1"), Callers.Manager, "message-1");
@@ -26,7 +26,7 @@ public class IdempotencyTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Remind>()
+            .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>());
         Link link = new Remind.Args("e1");
 
@@ -53,7 +53,7 @@ public class IdempotencyTests
         ActivitySource.AddActivityListener(listener);
         await using var features = new Features();
         features
-            .RegisterFeature<Remind>()
+            .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>().AddLogging(b => b.AddProvider(logs)));
 
         await features.Invoke(new Remind.Args("e1"), Callers.Manager, "message-1");
@@ -71,7 +71,7 @@ public class IdempotencyTests
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Remind>()
+            .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>());
 
         await Assert.ThrowsAsync<ArgumentException>(() => features.Invoke(new Remind.Args("e1"), Callers.Manager, key));

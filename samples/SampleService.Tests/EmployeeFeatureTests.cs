@@ -10,7 +10,7 @@ public class EmployeeFeatureTests
     public async Task AManagerCanHireSomeoneWhoseFirstReviewIsInThreeMonths()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<Hire>().RegisterAuthorizationHandler<HireAuthorization>());
+            .RegisterFeature<Hire, Hire.Rule>());
 
         var hired = Assert.IsType<Hire.Result.Hired>(await features.Invoke(new Hire.Args("Ann", "m1"), Callers.Manager));
 
@@ -23,7 +23,7 @@ public class EmployeeFeatureTests
     public async Task HiringAgainWithTheSameIdempotencyKeyHiresOnce()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<Hire>().RegisterAuthorizationHandler<HireAuthorization>());
+            .RegisterFeature<Hire, Hire.Rule>());
         var staff = _fakes.Employees.Count;
 
         var first = await features.Invoke(new Hire.Args("Ann", "m1"), Callers.Manager, "request-1");
@@ -37,7 +37,7 @@ public class EmployeeFeatureTests
     public async Task HiringUnderAManagerWhoIsNotHereSaysSo()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<Hire>().RegisterAuthorizationHandler<HireAuthorization>());
+            .RegisterFeature<Hire, Hire.Rule>());
 
         Assert.Equal(new Hire.Result.ManagerNotFound("e3"), await features.Invoke(new Hire.Args("Ann", "e3"), Callers.Manager));
     }
@@ -46,7 +46,7 @@ public class EmployeeFeatureTests
     public async Task FiringRecordsTheDepartureAndQueuesTellingPayroll()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>().RegisterLinksTo<HandleEmployeeLeft>());
+            .RegisterFeature<Fire, Fire.Rule>().RegisterLinksTo<HandleEmployeeLeft>());
 
         var result = await features.Invoke(new Fire.Args("e1"), Callers.Manager);
 
@@ -59,7 +59,7 @@ public class EmployeeFeatureTests
     public async Task FiringSomeoneWhoHasLeftSaysSoAndQueuesNothing()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>().RegisterLinksTo<HandleEmployeeLeft>());
+            .RegisterFeature<Fire, Fire.Rule>().RegisterLinksTo<HandleEmployeeLeft>());
 
         Assert.Equal(new Fire.Result.AlreadyLeft(), await features.Invoke(new Fire.Args("e4"), Callers.Manager));
         Assert.Empty(_fakes.QueuedMessages);
@@ -69,9 +69,8 @@ public class EmployeeFeatureTests
     public async Task EmployeeDetailsOfferAManagerALinkToFireButNotAnEmployee()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<EmployeeDetails>().RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<AnySignedInCaller<EmployeeDetails.Args>>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<EmployeeDetails, AnySignedInCaller<EmployeeDetails.Args>>()
+            .RegisterFeature<Fire, Fire.Rule>()
             .RegisterLinksTo<HandleEmployeeLeft>());
 
         var managers = await features.Invoke(new EmployeeDetails.Args("e2"), Callers.Manager);
@@ -85,7 +84,7 @@ public class EmployeeFeatureTests
     public async Task ReviewsDueListsTheCallersActiveReportsSoonestFirst()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<ReviewsDue>().RegisterAuthorizationHandler<AnySignedInCaller<ReviewsDue.Args>>());
+            .RegisterFeature<ReviewsDue, AnySignedInCaller<ReviewsDue.Args>>());
 
         var withinAMonth = await features.Invoke(new ReviewsDue.Args(), Callers.Manager);
         var withinAQuarter = await features.Invoke(new ReviewsDue.Args(90), Callers.Manager);

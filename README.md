@@ -53,8 +53,7 @@ var result = await features.Invoke(new Fire.Args("e1"), caller, cancellationToke
 public class Function
 {
     private readonly Features _features = new Features()
-        .RegisterFeature<Fire>()
-        .RegisterAuthorizationHandler<FireAuthorization>()
+        .RegisterFeature<Fire, Fire.Rule>()
         .RegisterDependencies(services => services.AddScoped<IEmployeeStore, DynamoEmployeeStore>())
         .Build();
 
@@ -72,8 +71,7 @@ public class Function
 
 ```csharp
 builder.Services.AddFeatures(features => features
-    .RegisterFeature<Fire>()
-    .RegisterAuthorizationHandler<FireAuthorization>());
+    .RegisterFeature<Fire, Fire.Rule>());
 builder.Services.AddOptions<JsonOptions>()
     .Configure<Features>((json, features) => features.ConfigureJson(json.SerializerOptions));
 
@@ -84,25 +82,34 @@ Either way, each invocation gets a dependency injection scope of its own, so a f
 
 ## Who may invoke what
 
-Every invocation has a caller, and every invocation is refused unless a rule approves it. A feature with no rule can't be invoked by anyone.
+Every invocation has a caller, and every invocation is refused unless a rule approves it. A feature is registered with its rules, so every feature has at least one.
 
-A rule is an authorization handler for `InvokeRequirement`, with the link as the resource. It sees the caller and the arguments, and can load whatever else it needs:
+A rule is an authorization handler for `InvokeRequirement`, with the feature's arguments as the resource. It sees the caller and the arguments, and can load whatever else it needs. A rule that belongs to one feature lives inside it, beside its `Args` and `Result`:
 
 ```csharp
-// Managers may fire anyone but themselves.
-public class FireAuthorization : AuthorizationHandler<InvokeRequirement, Fire.Args>
+public class Fire(IEmployeeStore employees) : Feature<Fire, Fire.Args, Fire.Result>
 {
-    protected override Task HandleRequirementAsync(
-        AuthorizationHandlerContext context, InvokeRequirement requirement, Fire.Args link)
+    ...
+
+    // Managers may fire anyone but themselves.
+    public class Rule : AuthorizationHandler<InvokeRequirement, Args>
     {
-        if (context.User.IsInRole("manager") && link.EmployeeId != context.User.Identity?.Name)
-            context.Succeed(requirement);
-        return Task.CompletedTask;
+        protected override Task HandleRequirementAsync(
+            AuthorizationHandlerContext context, InvokeRequirement requirement, Args link)
+        {
+            if (context.User.IsInRole("manager") && link.EmployeeId != context.User.Identity?.Name)
+                context.Succeed(requirement);
+            return Task.CompletedTask;
+        }
     }
 }
+
+features.RegisterFeature<Fire, Fire.Rule>();
 ```
 
-`AnySignedInCaller<EmployeeReview.Args>` opens one feature to every signed-in caller. `[AllowAnonymous]` on a feature opens it to everyone. A job invokes links as `SystemCaller.For("nightly-reminders")`, which is signed in and named but has no special powers.
+Three rules are ready-made. `AnyCaller<OpeningHours.Args>` opens a feature to everyone. `AnySignedInCaller<EmployeeReview.Args>` opens one to every signed-in caller. A job invokes links as `SystemCaller.For("nightly-reminders")`, which is signed in and named but has no special powers; `AnySystemCaller<SendReminders.Args>` opens a feature to system callers alone, for the handlers and jobs that only the service itself should invoke.
+
+A feature may have up to three rules, and anyone one of them approves may invoke it: `RegisterFeature<Fire, Fire.Rule, AnySystemCaller<Fire.Args>>()` lets managers and jobs fire people. Each entrypoint names the rules for the features it registers, so a feature can be open to more callers through one entrypoint than another. `RegisterFeature` rejects a rule written for another feature's arguments, and a feature with ASP.NET's `[AllowAnonymous]`, which Featurewise doesn't honour.
 
 A feature that offers a link asks `LinkPermissions.MayInvoke` first, which applies the same rules, so callers see only the links they can follow. Offering a link proves nothing later: a link that comes back is checked again.
 
@@ -165,7 +172,7 @@ Each invocation logs its start, with its id, its cause and any idempotency key; 
 
 - **Features don't invoke features.** A feature that leads to another returns a link to it, and the entrypoint decides whether to follow it. Shared logic lives in a service both features use. A feature can't take another feature as a dependency, and a feature that calls `Invoke` fails.
 - **Every link names one feature.** Links derive from `Link<TFeature, TResult>` and from nothing else.
-- **Deny by default.** No rule, no invocation.
+- **Deny by default.** Every feature is registered with its rules, and only what they approve is invoked.
 
 ## Building and testing
 

@@ -34,8 +34,8 @@ public static class FeatureServiceCollectionExtensions
     /// <example>
     /// <code>
     /// builder.Services.AddFeatures(features =&gt; features
-    ///     .RegisterFeature&lt;Fire&gt;()
-    ///     .RegisterAuthorizationHandler&lt;FireAuthorization&gt;());
+    ///     .RegisterFeature&lt;Fire, Fire.Rule&gt;()
+    ///     .RegisterFeature&lt;EmployeeReview, AnySignedInCaller&lt;EmployeeReview.Args&gt;&gt;());
     ///
     /// app.MapPost("/invoke", (Link link, ClaimsPrincipal user, Features features) =&gt; features.Invoke(link, user));
     /// </code>

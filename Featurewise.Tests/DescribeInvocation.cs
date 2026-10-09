@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-
-namespace Featurewise.Tests;
+﻿namespace Featurewise.Tests;
 
 // Returns what it knows about its invocation, so tests can see Invocation filled in.
-[AllowAnonymous]
 public class DescribeInvocation(Invocation invocation) : Feature<DescribeInvocation, DescribeInvocation.Args, DescribeInvocation.Result>
 {
     public record Args : Link<DescribeInvocation, Result>;

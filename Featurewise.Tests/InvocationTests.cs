@@ -23,7 +23,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Probe>()
+            .RegisterFeature<Probe, AnyCaller<Probe.Args>>()
             .RegisterDependencies(services => services.AddScoped<ScopeProbe>());
 
         var first = await features.Invoke(new Probe.Args(), Callers.Manager);
@@ -39,9 +39,8 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     {
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
-            .RegisterFeature<Escalate>()
+            .RegisterFeature<Fire, FireAuthorization>()
+            .RegisterFeature<Escalate, AnyCaller<Escalate.Args>>()
             .RegisterDependencies(s => s.AddSingleton(features));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => features.Invoke(new Escalate.Args("e1"), Callers.Manager));
@@ -51,7 +50,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     public async Task InvocationsInSequenceAreNotNested()
     {
         await using var features = new Features();
-        features.RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
+        features.RegisterFeature<Fire, FireAuthorization>();
 
         await features.Invoke(new Fire.Args("e1"), Callers.Manager);
         var second = await features.Invoke(new Fire.Args("e2"), Callers.Manager);
@@ -65,8 +64,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
@@ -81,8 +79,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
         using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(10));
 
@@ -101,7 +98,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<GiveUp>()
+            .RegisterFeature<GiveUp, AnyCaller<GiveUp.Args>>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => features.Invoke(new GiveUp.Args(), Callers.Manager));
@@ -115,7 +112,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     public async Task ALinkCanBeInvokedWithoutKnowingItsFeatureOrResult()
     {
         await using var features = new Features();
-        features.RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
+        features.RegisterFeature<Fire, FireAuthorization>();
         Link link = new Fire.Args("e1");
 
         var result = await features.Invoke(link, Callers.Manager);
@@ -137,8 +134,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
         ActivitySource.AddActivityListener(listener);
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         var result = await features.Invoke(new Fire.Args(Fire.Nobody), Callers.Manager);
@@ -159,7 +155,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<HandleEmployeeLeft>()
+            .RegisterFeature<HandleEmployeeLeft, AnyCaller<HandleEmployeeLeft.Args>>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         var result = await features.Invoke(new HandleEmployeeLeft.Args("e1"), SystemCaller.For("employee-events"));
@@ -181,7 +177,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
         };
         ActivitySource.AddActivityListener(listener);
         await using var features = new Features();
-        features.RegisterFeature<DescribeInvocation>();
+        features.RegisterFeature<DescribeInvocation, AnyCaller<DescribeInvocation.Args>>();
         const string cause = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
         using var cancellation = new CancellationTokenSource();
 

@@ -3,14 +3,15 @@
 namespace Featurewise;
 
 /// <summary>
-/// The requirement that the caller may invoke a link. Say who may invoke links to a feature by writing
+/// The requirement that the caller may invoke a link. Say who may invoke links to a feature with a rule:
 /// an authorization handler for this requirement, with the feature's arguments type as the resource.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A link is refused unless a handler approves it, so a feature with no handler can't be invoked,
-/// unless the feature has <see cref="AllowAnonymousAttribute"/>. Register handlers with
-/// <see cref="FeaturesBuilder.RegisterAuthorizationHandler{THandler}"/>.
+/// A link is refused unless one of its feature's rules approves it. A feature is registered with its
+/// rules, by <see cref="FeaturesBuilder.RegisterFeature{TFeature, TRule}"/>, so every feature has at
+/// least one. Write a rule nested in its feature, as in the example, or use a ready-made one:
+/// <see cref="AnyCaller{TArgs}"/>, <see cref="AnySignedInCaller{TArgs}"/> or <see cref="AnySystemCaller{TArgs}"/>.
 /// </para>
 /// <para>
 /// A handler runs in the invocation's scope, so it can take the same dependencies as the feature, such
@@ -21,17 +22,24 @@ namespace Featurewise;
 /// </remarks>
 /// <example>
 /// <code>
-/// // Managers may fire anyone but themselves.
-/// public class FireAuthorization : AuthorizationHandler&lt;InvokeRequirement, Fire.Args&gt;
+/// public class Fire(...) : Feature&lt;Fire, Fire.Args, Fire.Result&gt;
 /// {
-///     protected override Task HandleRequirementAsync(
-///         AuthorizationHandlerContext context, InvokeRequirement requirement, Fire.Args link)
+///     ...
+///
+///     // Managers may fire anyone but themselves.
+///     public class Rule : AuthorizationHandler&lt;InvokeRequirement, Args&gt;
 ///     {
-///         if (context.User.IsInRole("manager") &amp;&amp; link.EmployeeId != context.User.Identity?.Name)
-///             context.Succeed(requirement);
-///         return Task.CompletedTask;
+///         protected override Task HandleRequirementAsync(
+///             AuthorizationHandlerContext context, InvokeRequirement requirement, Args link)
+///         {
+///             if (context.User.IsInRole("manager") &amp;&amp; link.EmployeeId != context.User.Identity?.Name)
+///                 context.Succeed(requirement);
+///             return Task.CompletedTask;
+///         }
 ///     }
 /// }
+///
+/// features.RegisterFeature&lt;Fire, Fire.Rule&gt;();
 /// </code>
 /// </example>
 public sealed class InvokeRequirement : IAuthorizationRequirement

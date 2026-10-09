@@ -9,7 +9,7 @@ public class JsonTests
     public void ALinkRoundTripsThroughItsBaseTypeWithItsFeatureNameAndCause()
     {
         using var features = new Features();
-        features.RegisterFeature<Fire>();
+        features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
         Link<Fire.Result> link = new Fire.Args("e1") { CausedBy = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" };
 
@@ -26,7 +26,7 @@ public class JsonTests
     public void ALinkCarriesItsFeatureNameWhereverItIsSerialized()
     {
         using var features = new Features();
-        features.RegisterFeature<EmployeeReview>().RegisterFeature<Fire>();
+        features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>().RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize(new EmployeeReview.Result("comments", new Fire.Args("e1")), options);
@@ -40,7 +40,7 @@ public class JsonTests
     public void AFeatureNameAttributeNamesTheFeatureInJson()
     {
         using var features = new Features();
-        features.RegisterFeature<EmployeeReview>();
+        features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize<Link<EmployeeReview.Result>>(new EmployeeReview.Args("e1"), options);
@@ -52,7 +52,7 @@ public class JsonTests
     public void ALinkCanBeReadWithItsFeatureNameAnywhere()
     {
         using var features = new Features();
-        features.RegisterFeature<Fire>();
+        features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var readBack = JsonSerializer.Deserialize<Link<Fire.Result>>("""{"EmployeeId":"e1","$feature":"Fire"}""", options);
@@ -88,7 +88,7 @@ public class JsonTests
     public void ALinkReadFromJsonWithoutACauseHasNone()
     {
         using var features = new Features();
-        features.RegisterFeature<Fire>();
+        features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
         using var request = new Activity("request reading the link").Start();
 
@@ -104,7 +104,7 @@ public class JsonTests
     public async Task ALinkReadFromJsonAsAnyLinkCanBeInvoked()
     {
         await using var features = new Features();
-        features.RegisterFeature<EmployeeReview>().RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
+        features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>().RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
         var json = JsonSerializer.Serialize(new Fire.Args("e1"), options);
 
@@ -119,7 +119,7 @@ public class JsonTests
     public void NilRoundTripsAsAnEmptyObject()
     {
         using var features = new Features();
-        features.RegisterFeature<HandleEmployeeLeft>();
+        features.RegisterFeature<HandleEmployeeLeft, AnyCaller<HandleEmployeeLeft.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize(Nil.Value, options);
@@ -132,7 +132,7 @@ public class JsonTests
     public void AResultRoundTripsThroughItsBaseTypeWithItsCaseName()
     {
         using var features = new Features();
-        features.RegisterFeature<Fire>();
+        features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize<Fire.Result>(new Fire.Result.NotFound("e1"), options);
@@ -146,7 +146,7 @@ public class JsonTests
     public void AResultCarriesItsCaseNameWhereverItIsSerialized()
     {
         using var features = new Features();
-        features.RegisterFeature<Fire>();
+        features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize(new Fire.Result.Fired(), options);
@@ -159,7 +159,7 @@ public class JsonTests
     public void AResultWithoutCasesIsSerializedAsItIs()
     {
         using var features = new Features();
-        features.RegisterFeature<EmployeeReview>();
+        features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize(new EmployeeReview.Result("comments", null), options);
@@ -171,7 +171,7 @@ public class JsonTests
     public void ASealedCaseNamesItselfOnlyThroughItsResultType()
     {
         using var features = new Features();
-        features.RegisterFeature<TossCoin>();
+        features.RegisterFeature<TossCoin, AnyCaller<TossCoin.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         Assert.Equal("""{"$case":"Heads"}""", JsonSerializer.Serialize<TossCoin.Result>(new TossCoin.Result.Heads(), options));
@@ -188,7 +188,7 @@ public class JsonTests
     public void ALinkMissingANonNullableArgumentIsRejected(string json)
     {
         using var features = new Features();
-        features.RegisterFeature<Fire>().RegisterFeature<EmployeeSearch>();
+        features.RegisterFeature<Fire, FireAuthorization>().RegisterFeature<EmployeeSearch, AnyCaller<EmployeeSearch.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Link>(json, options));
@@ -198,7 +198,7 @@ public class JsonTests
     public async Task ALinksNullableAndDefaultedArgumentsMayBeLeftOut()
     {
         await using var features = new Features();
-        features.RegisterFeature<EmployeeSearch>();
+        features.RegisterFeature<EmployeeSearch, AnyCaller<EmployeeSearch.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var link = JsonSerializer.Deserialize<Link>("""{"$feature":"EmployeeSearch","Query":"a","Limit":10}""", options)!;
@@ -210,7 +210,7 @@ public class JsonTests
     public void TypesOtherThanLinksAreReadAsBefore()
     {
         using var features = new Features();
-        features.RegisterFeature<EmployeeReview>();
+        features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var result = JsonSerializer.Deserialize<EmployeeReview.Result>("{}", options)!;

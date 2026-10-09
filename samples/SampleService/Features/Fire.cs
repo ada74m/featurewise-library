@@ -1,4 +1,5 @@
 ﻿using Featurewise;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SampleService;
 
@@ -18,6 +19,18 @@ public class Fire(IEmployeeStore employees, LeaverRecorder leaverRecorder) : Fea
         public record AlreadyLeft : Result;
 
         public record NotFound(string EmployeeId) : Result;
+    }
+
+    // Managers may fire anyone but themselves.
+    public class Rule : AuthorizationHandler<InvokeRequirement, Args>
+    {
+        protected override Task HandleRequirementAsync(
+            AuthorizationHandlerContext context, InvokeRequirement requirement, Args link)
+        {
+            if (context.User.IsInRole("manager") && link.EmployeeId != context.User.Identity?.Name)
+                context.Succeed(requirement);
+            return Task.CompletedTask;
+        }
     }
 
     public override async Task<Result> Invoke(Args args, CancellationToken cancellationToken)

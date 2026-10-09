@@ -10,7 +10,7 @@ public class JobAndHandlerTests
     public async Task SendReviewRemindersTellsManagersOfReviewsDueThisWeek()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<SendReviewReminders>().RegisterAuthorizationHandler<AnySystemCaller<SendReviewReminders.Args>>());
+            .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>());
 
         var result = await features.Invoke(new SendReviewReminders.Args(), Callers.Job);
 
@@ -22,7 +22,7 @@ public class JobAndHandlerTests
     public async Task ArchiveLeaversRemovesThoseWhoLeftMoreThanNinetyDaysAgo()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<ArchiveLeavers>().RegisterAuthorizationHandler<AnySystemCaller<ArchiveLeavers.Args>>());
+            .RegisterFeature<ArchiveLeavers, AnySystemCaller<ArchiveLeavers.Args>>());
 
         var result = await features.Invoke(new ArchiveLeavers.Args(), Callers.Job);
 
@@ -35,7 +35,7 @@ public class JobAndHandlerTests
     public async Task HandleEmployeeLeftTellsPayroll()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<HandleEmployeeLeft>().RegisterAuthorizationHandler<AnySystemCaller<HandleEmployeeLeft.Args>>());
+            .RegisterFeature<HandleEmployeeLeft, AnySystemCaller<HandleEmployeeLeft.Args>>());
 
         Assert.Same(Nil.Value, await features.Invoke(new HandleEmployeeLeft.Args("e4"), Callers.Job));
         Assert.Equal([("payroll", "Lou (e4) has left: close their payroll")], _fakes.Notifier.Sent);
@@ -45,8 +45,8 @@ public class JobAndHandlerTests
     public async Task ADeactivatedAccountRecordsTheDepartureOfAnActiveEmployeeOnly()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<HandleAccountDeactivated>().RegisterFeature<HandleEmployeeLeft>()
-            .RegisterAuthorizationHandler<AnySystemCaller<HandleAccountDeactivated.Args>>());
+            .RegisterFeature<HandleAccountDeactivated, AnySystemCaller<HandleAccountDeactivated.Args>>()
+            .RegisterLinksTo<HandleEmployeeLeft>());
 
         var active = await features.Invoke(new HandleAccountDeactivated.Args("e1"), Callers.Job);
         var left = await features.Invoke(new HandleAccountDeactivated.Args("e4"), Callers.Job);
@@ -63,7 +63,7 @@ public class JobAndHandlerTests
     public async Task OnlyTheServicesOwnJobsAndWorkersMayInvokeThem()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<SendReviewReminders>().RegisterAuthorizationHandler<AnySystemCaller<SendReviewReminders.Args>>());
+            .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>());
 
         await Assert.ThrowsAsync<InvocationDeniedException>(() => features.Invoke(new SendReviewReminders.Args(), Callers.Manager));
         Assert.Empty(_fakes.Notifier.Sent);

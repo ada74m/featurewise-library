@@ -1,11 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
-
-namespace Featurewise.Tests;
+﻿namespace Featurewise.Tests;
 
 // Emits a link to Fire if the caller may follow it, so tests can see a link record the invocation that
 // created it, and a feature offer only links its caller may follow.
 [FeatureName("review-employee")]
-[AllowAnonymous]
 public class EmployeeReview(LinkPermissions permissions) : Feature<EmployeeReview, EmployeeReview.Args, EmployeeReview.Result>
 {
     public record Args(string EmployeeId) : Link<EmployeeReview, EmployeeReview.Result>;

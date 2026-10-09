@@ -5,7 +5,7 @@
 /// </summary>
 /// <typeparam name="TFeature">
 /// The deriving class itself. The compiler can't enforce this, so
-/// <see cref="Features.RegisterFeature{TFeature}"/> rejects a feature that names any other class here.
+/// <see cref="Features.RegisterFeature{TFeature, TRule}"/> rejects a feature that names any other class here.
 /// </typeparam>
 /// <typeparam name="TArgs">
 /// The feature's arguments, which must be a link to this feature. By convention, a record named
@@ -19,14 +19,14 @@
 /// </typeparam>
 /// <remarks>
 /// <para>
-/// Register features with <see cref="Features.RegisterFeature{TFeature}"/>. Each invocation resolves a
+/// Register features with <see cref="Features.RegisterFeature{TFeature, TRule}"/>. Each invocation resolves a
 /// new instance in a new dependency injection scope, so a feature takes its dependencies through its
 /// constructor.
 /// </para>
 /// <para>
-/// A feature can be invoked only by callers that an authorization handler approves, unless it has
-/// <see cref="Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute"/>; see
-/// <see cref="InvokeRequirement"/>. A feature can take <see cref="Invocation"/> to find out who invoked
+/// A feature can be invoked only by callers that one of the rules it's registered with approves: a
+/// rule nested in the feature, as in the example, or a ready-made one such as
+/// <see cref="AnySignedInCaller{TArgs}"/>; see <see cref="InvokeRequirement"/>. A feature can take <see cref="Invocation"/> to find out who invoked
 /// it, and <see cref="LinkPermissions"/> to offer only links its caller may follow.
 /// </para>
 /// <para>
@@ -54,6 +54,19 @@
 ///         public record Fired : Result;
 ///
 ///         public record NotFound(string EmployeeId) : Result;
+///     }
+///
+///     // Managers may fire anyone but themselves. Registered with the feature:
+///     // features.RegisterFeature&lt;Fire, Fire.Rule&gt;().
+///     public class Rule : AuthorizationHandler&lt;InvokeRequirement, Args&gt;
+///     {
+///         protected override Task HandleRequirementAsync(
+///             AuthorizationHandlerContext context, InvokeRequirement requirement, Args link)
+///         {
+///             if (context.User.IsInRole("manager") &amp;&amp; link.EmployeeId != context.User.Identity?.Name)
+///                 context.Succeed(requirement);
+///             return Task.CompletedTask;
+///         }
 ///     }
 ///
 ///     public override async Task&lt;Result&gt; Invoke(Args args, CancellationToken cancellationToken)

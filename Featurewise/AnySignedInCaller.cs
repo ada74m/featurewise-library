@@ -9,22 +9,19 @@ namespace Featurewise;
 /// <typeparam name="TArgs">The arguments type of the feature to open to signed-in callers.</typeparam>
 /// <remarks>
 /// <para>
-/// Register one per feature that needs no rule beyond "signed in", so that the registrations list
-/// which features are open:
+/// Register a feature with it when the feature needs no rule beyond "signed in":
 /// <code>
-/// features
-///     .RegisterFeature&lt;EmployeeReview&gt;()
-///     .RegisterAuthorizationHandler&lt;AnySignedInCaller&lt;EmployeeReview.Args&gt;&gt;();
+/// features.RegisterFeature&lt;EmployeeReview, AnySignedInCaller&lt;EmployeeReview.Args&gt;&gt;();
 /// </code>
 /// </para>
 /// <para>
-/// Each registration applies only to links of its own type. A handler that approves a base link type,
-/// such as <see cref="Link"/>, would approve every feature's links, because any handler that approves
-/// a link is enough to allow it.
+/// Each closed type applies only to links of its own type. A handler that approves a base link type,
+/// such as <see cref="Link"/>, would approve every feature's links, because any rule that approves a
+/// link is enough to allow it.
 /// </para>
 /// <para>
-/// To let anyone invoke a feature, including callers who aren't signed in, put
-/// <see cref="AllowAnonymousAttribute"/> on the feature instead.
+/// To let anyone invoke a feature, including callers who aren't signed in, use
+/// <see cref="AnyCaller{TArgs}"/> instead.
 /// </para>
 /// </remarks>
 public sealed class AnySignedInCaller<TArgs> : AuthorizationHandler<InvokeRequirement, TArgs> where TArgs : Link

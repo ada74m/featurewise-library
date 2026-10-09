@@ -13,8 +13,8 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         
         await using var features = new Features();
-        features.RegisterFeature<EmployeeReview>();
-        features.RegisterFeature<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
+        features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
+        features.RegisterFeature<Fire, FireAuthorization>();
         features.RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
         
         var link = new EmployeeReview.Args("e1");
@@ -34,8 +34,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         await features.Invoke(new Fire.Args("e1"), Callers.Manager);
@@ -50,8 +49,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         await features.Invoke(new Fire.Args("e1"), Callers.Manager);
@@ -71,7 +69,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<Explode>()
+            .RegisterFeature<Explode, AnyCaller<Explode.Args>>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() => features.Invoke(new Explode.Args(), Callers.Manager));
@@ -91,8 +89,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         await using (var features = new Features())
         {
             features
-                .RegisterFeature<Fire>()
-                .RegisterAuthorizationHandler<FireAuthorization>()
+                .RegisterFeature<Fire, FireAuthorization>()
                 .UseLoggerFactory(hostLoggerFactory);
 
             await features.Invoke(new Fire.Args("e1"), Callers.Manager);
@@ -135,9 +132,8 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
 
         await using var features = new Features();
         features
-            .RegisterFeature<EmployeeReview>()
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>();
+            .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
+            .RegisterFeature<Fire, FireAuthorization>();
 
         Fire.Args fireLink;
         using (new Activity("first request").Start())
@@ -165,9 +161,8 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         await using var features = new Features();
         features
-            .RegisterFeature<EmployeeReview>()
-            .RegisterFeature<Fire>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
+            .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
+            .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
 
         var result = await features.Invoke(new EmployeeReview.Args("e1"), Callers.Manager);

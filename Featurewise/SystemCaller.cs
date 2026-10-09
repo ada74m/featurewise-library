@@ -10,7 +10,8 @@ namespace Featurewise;
 /// <para>
 /// A system caller is signed in and named after its job, so its invocations can be told apart in logs
 /// and traces. It gets no special treatment: like any caller, it may invoke a link only if a rule
-/// approves it. A rule can recognise it with <see cref="IsSystem"/>.
+/// approves it. A rule can recognise it with <see cref="IsSystem"/>, and
+/// <see cref="AnySystemCaller{TArgs}"/> opens a feature to system callers alone.
 /// </para>
 /// <para>
 /// Only code running in the process can create a system caller. A caller from outside, such as an HTTP

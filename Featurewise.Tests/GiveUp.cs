@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-
-namespace Featurewise.Tests;
+﻿namespace Featurewise.Tests;
 
 // Throws OperationCanceledException without its caller cancelling, as a timeout of its own would.
-[AllowAnonymous]
 public class GiveUp : Feature<GiveUp, GiveUp.Args, bool>
 {
     public record Args : Link<GiveUp, bool>;

@@ -1,6 +1,7 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using Featurewise;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SampleService;
 
@@ -18,6 +19,18 @@ public class Hire(IEmployeeStore employees, Invocation invocation, TimeProvider 
         public record Hired(string EmployeeId) : Result;
 
         public record ManagerNotFound(string ManagerId) : Result;
+    }
+
+    // Managers may hire.
+    public class Rule : AuthorizationHandler<InvokeRequirement, Args>
+    {
+        protected override Task HandleRequirementAsync(
+            AuthorizationHandlerContext context, InvokeRequirement requirement, Args link)
+        {
+            if (context.User.IsInRole("manager"))
+                context.Succeed(requirement);
+            return Task.CompletedTask;
+        }
     }
 
     public override async Task<Result> Invoke(Args args, CancellationToken cancellationToken)

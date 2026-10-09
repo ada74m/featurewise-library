@@ -30,18 +30,17 @@ public class Function
 
     public Function(Action<IServiceCollection> registerDependencies)
     {
+        _features
+            .RegisterFeature<EmployeeDetails, AnySignedInCaller<EmployeeDetails.Args>>()
+            .RegisterFeature<ReviewsDue, AnySignedInCaller<ReviewsDue.Args>>()
+            .RegisterFeature<Hire, Hire.Rule>()
+            .RegisterFeature<Fire, Fire.Rule>()
+            // Fire queues a link to HandleEmployeeLeft, which the QueueWorker invokes.
+            .RegisterLinksTo<HandleEmployeeLeft>();
         Query<EmployeeDetails>();
         Query<ReviewsDue>();
         Command<Hire>();
         Command<Fire>();
-
-        _features
-            .RegisterAuthorizationHandler<AnySignedInCaller<EmployeeDetails.Args>>()
-            .RegisterAuthorizationHandler<AnySignedInCaller<ReviewsDue.Args>>()
-            .RegisterAuthorizationHandler<HireAuthorization>()
-            .RegisterAuthorizationHandler<FireAuthorization>()
-            // Fire queues a link to HandleEmployeeLeft, which the QueueWorker invokes.
-            .RegisterLinksTo<HandleEmployeeLeft>();
 
         _json = _features.ConfigureJson(new JsonSerializerOptions());
         // Query strings carry only strings, so numeric arguments are read from them.
@@ -92,13 +91,13 @@ public class Function
         }
     }
 
-    private void Query<TFeature>() where TFeature : class => Register<TFeature>("GET");
+    private void Query<TFeature>() => Offer<TFeature>("GET");
 
-    private void Command<TFeature>() where TFeature : class => Register<TFeature>("POST");
+    private void Command<TFeature>() => Offer<TFeature>("POST");
 
-    private void Register<TFeature>(string method) where TFeature : class
+    // Offers a registered feature over HTTP, by the method that invokes it.
+    private void Offer<TFeature>(string method)
     {
-        _features.RegisterFeature<TFeature>();
         var name = typeof(TFeature).GetCustomAttribute<FeatureNameAttribute>()?.Name ?? typeof(TFeature).Name;
         _methodsByFeature.Add(name, method);
     }
