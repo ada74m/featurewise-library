@@ -28,7 +28,7 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 
 ## Conventions
 
-- One type per file, except generic arities of one name, which share a file (`Link.cs`, `IFeature.cs`).
+- One type per file, except generic arities of one name, which share a file (`Link.cs`, `IFeature.cs`), and a sample facility's interface and its implementation, which share a file named after the interface without the `I` (`IEmployeeStore` and `DynamoEmployeeStore` in `Facilities/EmployeeStore.cs`).
 - Feature names: commands are verb phrases, queries are noun phrases, event handlers are `Handle` plus the event. In the tests, `EmployeeSearch` is a query, `Remind` a command and `HandleEmployeeLeft` an event handler.
 - Prose (README, XML docs) is in classic style: direct, no metadiscourse, no hedging.
 
