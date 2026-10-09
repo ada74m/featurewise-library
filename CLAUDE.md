@@ -45,6 +45,10 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 - **JSON** (`FeatureRegistry.ConfigureJson`): adds type-info modifiers that make link types polymorphic with a `$feature` discriminator (the feature name, from the class name or `[FeatureName]`), enforce required/non-null link arguments on read (links only, so host types are unaffected), and make registered result types with cases polymorphic with a `$case` discriminator. Cases are public non-abstract types nested in an abstract result type; they should stay unsealed.
 - `Features` registers its own `ActivityListener` so every invocation gets an activity id even without OpenTelemetry.
 
+## Samples
+
+`samples/` holds SampleService, an HR service on AWS Lambda that uses the library as a real service would (`samples/README.md`): a core project, one project per entrypoint (`Api`, `ScheduledWorker`, `QueueWorker`), each registering only the features it invokes, and `SampleService.Tests`, which drives each entrypoint with fake Lambda events over in-memory fakes. Each project keeps its Terraform in its own `infrastructure/` module; `samples/infrastructure/` is the root module that wires them together. Check Terraform with `terraform fmt -check -recursive samples` and, in `samples/infrastructure`, `terraform init -backend=false && terraform validate`; never `plan` or `apply` against AWS unasked.
+
 ## Tests
 
 The tests are split by topic into `*Tests.cs` files (`RegistrationTests`, `InvocationTests`, `AuthorizationTests`, `JsonTests`, `HostingTests`, …), named as sentences describing behaviour. Test classes run one at a time (`TestParallelization.cs`), because a test's `ActivityListener` hears every invocation in the process. The other files in that project are small purpose-built features, authorization handlers and helpers that the tests exercise (e.g. `Fire`, `EmployeeReview`, `Promote` as a deliberately mis-declared feature, `Callers` for test principals, `CapturingLoggerProvider` for asserting on logs). Add a new fixture feature as its own file with a one-line comment saying what it's for.
