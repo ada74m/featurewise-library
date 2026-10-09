@@ -17,12 +17,12 @@ variable "employees_policy_json" {
   type        = string
 }
 
-variable "link_queue_url" {
+variable "work_queue_url" {
   description = "The queue features send links to, such as Fire's link to HandleEmployeeLeft."
   type        = string
 }
 
-variable "link_queue_arn" {
+variable "work_queue_arn" {
   type = string
 }
 

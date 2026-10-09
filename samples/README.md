@@ -6,7 +6,7 @@ A small HR service built with Featurewise: managers hire, fire and review their 
 
 | Project | What it is |
 |---|---|
-| `SampleService` | The core: employees, the features with the rules about who may invoke them nested in them, and the services they depend on (a DynamoDB store, a link queue on SQS, a notifier that logs). |
+| `SampleService` | The core: employees, the features with the rules about who may invoke them nested in them, and the services they depend on (a DynamoDB store, a work queue on SQS, a notifier that logs). |
 | `SampleService.Api` | API Gateway's HTTP API. `GET /{feature}` invokes a query with its arguments in the query string; `POST /{feature}` invokes a command with its arguments as the JSON body. The caller comes from the JWT authorizer's claims, and an `Idempotency-Key` header becomes the invocation's idempotency key. |
 | `SampleService.ScheduledWorker` | EventBridge Scheduler. Each schedule's input carries its job's link, so one function runs every job, as a `SystemCaller` named after the schedule. |
 | `SampleService.QueueWorker` | SQS. A message is either a link the service sent itself, or an event from another service's SNS topic, which an adapter for that topic turns into a link. Failed messages are retried alone, then dead-lettered. |

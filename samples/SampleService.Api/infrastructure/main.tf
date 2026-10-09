@@ -5,7 +5,7 @@ data "aws_iam_policy_document" "function" {
 
   statement {
     actions   = ["sqs:SendMessage"]
-    resources = [var.link_queue_arn]
+    resources = [var.work_queue_arn]
   }
 }
 
@@ -18,7 +18,7 @@ module "function" {
   policy_json = data.aws_iam_policy_document.function.json
   environment = {
     EMPLOYEES_TABLE = var.employees_table_name
-    LINK_QUEUE_URL  = var.link_queue_url
+    WORK_QUEUE_URL  = var.work_queue_url
   }
 }
 

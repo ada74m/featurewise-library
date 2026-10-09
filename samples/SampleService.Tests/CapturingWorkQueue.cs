@@ -3,8 +3,8 @@ using Featurewise;
 
 namespace SampleService.Tests;
 
-// Records the JSON of each link sent, written as SqsLinkQueue writes it, in place of SQS.
-public class CapturingLinkQueue(JsonSerializerOptions json, List<string> messages) : ILinkQueue
+// Records the JSON of each link sent, written as SqsWorkQueue writes it, in place of SQS.
+public class CapturingWorkQueue(JsonSerializerOptions json, List<string> messages) : IWorkQueue
 {
     public Task Send(Link link, CancellationToken cancellationToken)
     {

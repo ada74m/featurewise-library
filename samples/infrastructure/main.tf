@@ -30,8 +30,8 @@ module "api" {
   publish_dir           = "${local.artifacts_dir}/SampleService.Api"
   employees_table_name  = module.core.employees_table_name
   employees_policy_json = module.core.employees_policy_json
-  link_queue_url        = module.queue_worker.link_queue_url
-  link_queue_arn        = module.queue_worker.link_queue_arn
+  work_queue_url        = module.queue_worker.work_queue_url
+  work_queue_arn        = module.queue_worker.work_queue_arn
   jwt_issuer            = var.jwt_issuer
   jwt_audience          = var.jwt_audience
 }

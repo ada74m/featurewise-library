@@ -89,6 +89,6 @@ public class Function
         }
 
         var link = JsonSerializer.Deserialize<Link>(message.Body, _json) ?? throw new JsonException("the message is null");
-        await _features.Invoke(link, SystemCaller.For("link-queue"), message.MessageId, timeout.Token);
+        await _features.Invoke(link, SystemCaller.For("work-queue"), message.MessageId, timeout.Token);
     }
 }

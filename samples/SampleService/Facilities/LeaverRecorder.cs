@@ -2,7 +2,7 @@
 
 // Records that an employee has left, whichever feature learns of it, and queues the work that follows.
 // Fire and HandleAccountDeactivated share this rather than one invoking the other.
-public class LeaverRecorder(IEmployeeStore employees, ILinkQueue queue, TimeProvider time)
+public class LeaverRecorder(IEmployeeStore employees, IWorkQueue queue, TimeProvider time)
 {
     public async Task Record(Employee employee, CancellationToken cancellationToken)
     {

@@ -1,13 +1,13 @@
-# The queue worker: the service's link queue, with its dead-letter queue, the function that invokes what
+# The queue worker: the service's work queue, with its dead-letter queue, the function that invokes what
 # arrives on it, and subscriptions to other services' topics.
 
 resource "aws_sqs_queue" "dead_letters" {
-  name                      = "${var.name_prefix}-links-dead-letters"
+  name                      = "${var.name_prefix}-work-dead-letters"
   message_retention_seconds = 1209600
 }
 
-resource "aws_sqs_queue" "links" {
-  name = "${var.name_prefix}-links"
+resource "aws_sqs_queue" "work" {
+  name = "${var.name_prefix}-work"
   # Six times the function's timeout, as Lambda recommends, so a message isn't redelivered while a
   # retried batch is still running.
   visibility_timeout_seconds = 180
@@ -22,13 +22,13 @@ data "aws_iam_policy_document" "function" {
 
   statement {
     actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
-    resources = [aws_sqs_queue.links.arn]
+    resources = [aws_sqs_queue.work.arn]
   }
 
   # Handlers queue links too, such as HandleAccountDeactivated's link to HandleEmployeeLeft.
   statement {
     actions   = ["sqs:SendMessage"]
-    resources = [aws_sqs_queue.links.arn]
+    resources = [aws_sqs_queue.work.arn]
   }
 }
 
@@ -41,14 +41,14 @@ module "function" {
   policy_json = data.aws_iam_policy_document.function.json
   environment = {
     EMPLOYEES_TABLE = var.employees_table_name
-    LINK_QUEUE_URL  = aws_sqs_queue.links.url
+    WORK_QUEUE_URL  = aws_sqs_queue.work.url
     TOPIC_ADAPTERS  = join(";", [for topic, adapter in var.topic_adapters : "${topic}=${adapter}"])
   }
 }
 
 # The function reports which messages failed, so SQS retries only those.
-resource "aws_lambda_event_source_mapping" "links" {
-  event_source_arn        = aws_sqs_queue.links.arn
+resource "aws_lambda_event_source_mapping" "work" {
+  event_source_arn        = aws_sqs_queue.work.arn
   function_name           = module.function.function_arn
   batch_size              = 10
   function_response_types = ["ReportBatchItemFailures"]
@@ -60,15 +60,15 @@ resource "aws_sns_topic_subscription" "topics" {
 
   topic_arn = each.key
   protocol  = "sqs"
-  endpoint  = aws_sqs_queue.links.arn
+  endpoint  = aws_sqs_queue.work.arn
 }
 
-data "aws_iam_policy_document" "links_queue" {
+data "aws_iam_policy_document" "work_queue" {
   count = length(var.topic_adapters) == 0 ? 0 : 1
 
   statement {
     actions   = ["sqs:SendMessage"]
-    resources = [aws_sqs_queue.links.arn]
+    resources = [aws_sqs_queue.work.arn]
     principals {
       type        = "Service"
       identifiers = ["sns.amazonaws.com"]
@@ -81,9 +81,9 @@ data "aws_iam_policy_document" "links_queue" {
   }
 }
 
-resource "aws_sqs_queue_policy" "links" {
+resource "aws_sqs_queue_policy" "work" {
   count = length(var.topic_adapters) == 0 ? 0 : 1
 
-  queue_url = aws_sqs_queue.links.id
-  policy    = data.aws_iam_policy_document.links_queue[0].json
+  queue_url = aws_sqs_queue.work.id
+  policy    = data.aws_iam_policy_document.work_queue[0].json
 }

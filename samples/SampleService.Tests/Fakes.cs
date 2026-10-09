@@ -20,8 +20,8 @@ public class Fakes
     {
         SampleServiceDependencies.RegisterDomain(services);
         services.AddSingleton<IEmployeeStore>(Employees);
-        services.AddSingleton<ILinkQueue>(provider =>
-            new CapturingLinkQueue(provider.GetRequiredService<JsonSerializerOptions>(), QueuedMessages));
+        services.AddSingleton<IWorkQueue>(provider =>
+            new CapturingWorkQueue(provider.GetRequiredService<JsonSerializerOptions>(), QueuedMessages));
         services.AddSingleton<INotifier>(Notifier);
         services.AddSingleton<TimeProvider>(new FixedTime(Today));
     }

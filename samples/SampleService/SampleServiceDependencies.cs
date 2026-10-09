@@ -17,7 +17,7 @@ public static class SampleServiceDependencies
     }
 
     // Everything, against AWS, configured by the function's environment. The entrypoint registers the
-    // JsonSerializerOptions that Features set up, which the link queue writes links with.
+    // JsonSerializerOptions that Features set up, which the work queue writes links with.
     public static void RegisterAws(IServiceCollection services)
     {
         RegisterDomain(services);
@@ -29,8 +29,8 @@ public static class SampleServiceDependencies
         services.AddSingleton<IAmazonSQS>(_ => new AmazonSQSClient());
         services.AddSingleton<IEmployeeStore>(provider =>
             new DynamoEmployeeStore(provider.GetRequiredService<IAmazonDynamoDB>(), Setting("EMPLOYEES_TABLE")));
-        services.AddSingleton<ILinkQueue>(provider => new SqsLinkQueue(
-            provider.GetRequiredService<IAmazonSQS>(), provider.GetRequiredService<JsonSerializerOptions>(), Setting("LINK_QUEUE_URL")));
+        services.AddSingleton<IWorkQueue>(provider => new SqsWorkQueue(
+            provider.GetRequiredService<IAmazonSQS>(), provider.GetRequiredService<JsonSerializerOptions>(), Setting("WORK_QUEUE_URL")));
         services.AddSingleton<INotifier, LoggingNotifier>();
     }
 
