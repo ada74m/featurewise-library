@@ -3,7 +3,7 @@
 namespace SampleService;
 
 // Ends someone's employment. What follows, such as telling payroll, happens later through the queue.
-public class Fire(IEmployeeStore employees, Departures departures) : Feature<Fire, Fire.Args, Fire.Result>
+public class Fire(IEmployeeStore employees, LeaverRecorder leaverRecorder) : Feature<Fire, Fire.Args, Fire.Result>
 {
     public record Args(string EmployeeId) : Link<Fire, Result>;
 
@@ -28,7 +28,7 @@ public class Fire(IEmployeeStore employees, Departures departures) : Feature<Fir
         if (employee.Status == EmploymentStatus.Left)
             return new Result.AlreadyLeft();
 
-        await departures.Record(employee, cancellationToken);
+        await leaverRecorder.Record(employee, cancellationToken);
         return new Result.Fired();
     }
 }

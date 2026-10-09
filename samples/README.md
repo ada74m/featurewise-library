@@ -14,7 +14,7 @@ A small HR service built with Featurewise: managers hire, fire and review their 
 
 Each entrypoint registers only the features it invokes. Where a feature sends a link to a feature that runs elsewhere, as `Fire` queues `HandleEmployeeLeft`, the entrypoint registers that feature's links with `RegisterLinksTo`, so it can write them.
 
-Features don't invoke features. `Fire` and `HandleAccountDeactivated` both record a departure, so they share the `Departures` service, which saves the employee and queues the link to `HandleEmployeeLeft`.
+Features don't invoke features. `Fire` and `HandleAccountDeactivated` both record a departure, so they share the `LeaverRecorder` service, which saves the employee and queues the link to `HandleEmployeeLeft`.
 
 ## Infrastructure
 

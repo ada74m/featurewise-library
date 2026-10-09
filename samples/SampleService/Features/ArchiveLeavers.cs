@@ -12,7 +12,7 @@ public class ArchiveLeavers(IEmployeeStore employees, TimeProvider time)
 
     public override async Task<Result> Invoke(Args args, CancellationToken cancellationToken)
     {
-        var cutoff = Departures.Today(time).AddDays(-args.AfterDays);
+        var cutoff = time.Today().AddDays(-args.AfterDays);
         var leavers = (await employees.All(cancellationToken))
             .Where(e => e.Status == EmploymentStatus.Left && e.LeftOn <= cutoff)
             .ToList();

@@ -13,7 +13,7 @@ public class SendReviewReminders(IEmployeeStore employees, INotifier notifier, T
 
     public override async Task<Result> Invoke(Args args, CancellationToken cancellationToken)
     {
-        var horizon = Departures.Today(time).AddDays(7);
+        var horizon = time.Today().AddDays(7);
         var due = (await employees.All(cancellationToken))
             .Where(e => e.Status == EmploymentStatus.Active && e.ManagerId is not null && e.ReviewDue <= horizon)
             .ToList();

@@ -29,7 +29,7 @@ public class Hire(IEmployeeStore employees, Invocation invocation, TimeProvider 
         var id = invocation.IdempotencyKey is { } key ? IdFrom(key) : Guid.NewGuid().ToString("N");
         if (await employees.Find(id, cancellationToken) is null)
         {
-            var firstReview = Departures.Today(time).AddMonths(3);
+            var firstReview = time.Today().AddMonths(3);
             await employees.Save(new Employee(id, args.Name, args.ManagerId, EmploymentStatus.Active, firstReview), cancellationToken);
         }
 

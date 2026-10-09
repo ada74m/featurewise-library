@@ -4,7 +4,7 @@ namespace SampleService;
 
 // Handles the directory service's news that someone's account was closed: the directory is the record
 // of who has left, so an employee still active here has left too.
-public class HandleAccountDeactivated(IEmployeeStore employees, Departures departures)
+public class HandleAccountDeactivated(IEmployeeStore employees, LeaverRecorder leaverRecorder)
     : Feature<HandleAccountDeactivated, HandleAccountDeactivated.Args, HandleAccountDeactivated.Result>
 {
     public record Args(string EmployeeId) : Link<HandleAccountDeactivated, Result>;
@@ -30,7 +30,7 @@ public class HandleAccountDeactivated(IEmployeeStore employees, Departures depar
         if (employee.Status == EmploymentStatus.Left)
             return new Result.AlreadyLeft();
 
-        await departures.Record(employee, cancellationToken);
+        await leaverRecorder.Record(employee, cancellationToken);
         return new Result.RecordedDeparture();
     }
 }

@@ -13,7 +13,7 @@ public static class SampleServiceDependencies
     public static void RegisterDomain(IServiceCollection services)
     {
         services.AddSingleton(TimeProvider.System);
-        services.AddScoped<Departures>();
+        services.AddScoped<LeaverRecorder>();
     }
 
     // Everything, against AWS, configured by the function's environment. The entrypoint registers the

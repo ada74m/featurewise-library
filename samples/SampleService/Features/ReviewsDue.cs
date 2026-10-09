@@ -12,7 +12,7 @@ public class ReviewsDue(IEmployeeStore employees, Invocation invocation, TimePro
 
     public override async Task<Result> Invoke(Args args, CancellationToken cancellationToken)
     {
-        var horizon = Departures.Today(time).AddDays(args.WithinDays);
+        var horizon = time.Today().AddDays(args.WithinDays);
         var manager = invocation.Caller.Identity?.Name;
         var due = (await employees.All(cancellationToken))
             .Where(e => e.Status == EmploymentStatus.Active && e.ManagerId == manager && e.ReviewDue <= horizon)
