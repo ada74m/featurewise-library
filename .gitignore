@@ -3,3 +3,10 @@ obj/
 *.user
 *.DotSettings.user
 .idea/
+
+# Terraform and published Lambda packages
+.terraform/
+*.tfstate
+*.tfstate.*
+samples/infrastructure/.build/
+samples/artifacts/
