@@ -6,13 +6,13 @@ locals {
 }
 
 module "core" {
-  source = "../SampleService/infrastructure"
+  source = "../SampleService/Infrastructure"
 
   name_prefix = var.name_prefix
 }
 
 module "queue_worker" {
-  source = "../SampleService.QueueWorker/infrastructure"
+  source = "../SampleService.QueueWorker/Infrastructure"
 
   name_prefix           = var.name_prefix
   publish_dir           = "${local.artifacts_dir}/SampleService.QueueWorker"
@@ -24,7 +24,7 @@ module "queue_worker" {
 }
 
 module "api" {
-  source = "../SampleService.Api/infrastructure"
+  source = "../SampleService.Api/Infrastructure"
 
   name_prefix           = var.name_prefix
   publish_dir           = "${local.artifacts_dir}/SampleService.Api"
@@ -37,7 +37,7 @@ module "api" {
 }
 
 module "scheduled_worker" {
-  source = "../SampleService.ScheduledWorker/infrastructure"
+  source = "../SampleService.ScheduledWorker/Infrastructure"
 
   name_prefix           = var.name_prefix
   publish_dir           = "${local.artifacts_dir}/SampleService.ScheduledWorker"

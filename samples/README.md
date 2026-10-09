@@ -18,7 +18,7 @@ Features don't invoke features. `Fire` and `HandleAccountDeactivated` both recor
 
 ## Infrastructure
 
-Each project keeps the Terraform for its own resources in its `infrastructure` folder, as a module. `infrastructure/` here is the root module, which calls them and passes one's outputs to another, such as the queue worker's queue URL to the API. The functions share `infrastructure/modules/lambda-function`.
+Each project keeps the Terraform for its own resources in its `Infrastructure` folder, as a module. `Infrastructure/` here is the root module, which calls them and passes one's outputs to another, such as the queue worker's queue URL to the API. The functions share `Infrastructure/modules/lambda-function`.
 
 Publish each function, then plan from the root module:
 
@@ -28,9 +28,9 @@ for project in Api ScheduledWorker QueueWorker; do
     -o samples/artifacts/SampleService.$project
 done
 
-cd samples/infrastructure
+cd samples/Infrastructure
 terraform init
 terraform plan -var jwt_issuer=https://cognito-idp.eu-west-2.amazonaws.com/<user pool> -var 'jwt_audience=["<app client>"]'
 ```
 
-Without `jwt_issuer`, every API caller is anonymous, and every feature the API offers refuses them. Without `directory_events_topic_arn`, the queue worker subscribes to no other service's events. State is local until a backend is configured in `infrastructure/versions.tf`.
+Without `jwt_issuer`, every API caller is anonymous, and every feature the API offers refuses them. Without `directory_events_topic_arn`, the queue worker subscribes to no other service's events. State is local until a backend is configured in `Infrastructure/versions.tf`.

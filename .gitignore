@@ -8,5 +8,5 @@ obj/
 .terraform/
 *.tfstate
 *.tfstate.*
-samples/infrastructure/.build/
+samples/Infrastructure/.build/
 samples/artifacts/

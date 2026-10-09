@@ -10,7 +10,7 @@ data "aws_iam_policy_document" "function" {
 }
 
 module "function" {
-  source = "../../infrastructure/modules/lambda-function"
+  source = "../../Infrastructure/modules/lambda-function"
 
   name        = "${var.name_prefix}-api"
   publish_dir = var.publish_dir

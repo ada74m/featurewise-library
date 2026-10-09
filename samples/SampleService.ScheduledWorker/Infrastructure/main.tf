@@ -1,7 +1,7 @@
 # The scheduled worker: one function, invoked by an EventBridge schedule per job.
 
 module "function" {
-  source = "../../infrastructure/modules/lambda-function"
+  source = "../../Infrastructure/modules/lambda-function"
 
   name        = "${var.name_prefix}-scheduled-worker"
   publish_dir = var.publish_dir
