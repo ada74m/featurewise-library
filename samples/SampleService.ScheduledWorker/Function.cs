@@ -12,7 +12,7 @@ public class Function
     private readonly Features _features = new();
     private readonly JsonSerializerOptions _json;
 
-    public Function() : this(SampleServiceDependencies.RegisterAws)
+    public Function() : this(Registrations.Aws)
     {
     }
 

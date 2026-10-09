@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SampleService.Tests;
 
-// Stand-ins for AWS and the clock, registered in place of SampleServiceDependencies.RegisterAws, which
+// Stand-ins for AWS and the clock, registered in place of Registrations.Aws, which
 // tests seed and inspect.
 public class Fakes
 {
@@ -18,7 +18,7 @@ public class Fakes
 
     public void Register(IServiceCollection services)
     {
-        SampleServiceDependencies.RegisterDomain(services);
+        Registrations.Domain(services);
         services.AddSingleton<IEmployeeStore>(Employees);
         services.AddSingleton<IWorkQueue>(provider =>
             new CapturingWorkQueue(provider.GetRequiredService<JsonSerializerOptions>(), QueuedMessages));

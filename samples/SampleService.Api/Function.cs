@@ -24,7 +24,7 @@ public class Function
     private readonly JsonSerializerOptions _json;
     private readonly JsonSerializerOptions _queryStringJson;
 
-    public Function() : this(SampleServiceDependencies.RegisterAws)
+    public Function() : this(Registrations.Aws)
     {
     }
 

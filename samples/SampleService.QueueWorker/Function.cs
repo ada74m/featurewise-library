@@ -23,7 +23,7 @@ public class Function
         ["directory"] = new DirectoryEventsAdapter()
     };
 
-    public Function() : this(SampleServiceDependencies.RegisterAws, Environment.GetEnvironmentVariable("TOPIC_ADAPTERS") ?? "")
+    public Function() : this(Registrations.Aws, Environment.GetEnvironmentVariable("TOPIC_ADAPTERS") ?? "")
     {
     }
 

@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging;
 namespace SampleService;
 
 // The services that features depend on, which every entrypoint registers the same way.
-public static class SampleServiceDependencies
+public static class Registrations
 {
     // What the features need whatever they run against.
-    public static void RegisterDomain(IServiceCollection services)
+    public static void Domain(IServiceCollection services)
     {
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<LeaverRecorder>();
@@ -18,9 +18,9 @@ public static class SampleServiceDependencies
 
     // Everything, against AWS, configured by the function's environment. The entrypoint registers the
     // JsonSerializerOptions that Features set up, which the work queue writes links with.
-    public static void RegisterAws(IServiceCollection services)
+    public static void Aws(IServiceCollection services)
     {
-        RegisterDomain(services);
+        Domain(services);
 
         // Lambda's logger writes each entry as it's logged, so nothing is lost when the function freezes.
         services.AddLogging(logging => logging.AddLambdaLogger(new LambdaLoggerOptions { IncludeScopes = true }));
