@@ -168,6 +168,27 @@ public class Features : IDisposable, IAsyncDisposable
         return this;
     }
 
+    /// <summary>
+    /// Registers a feature's links without the feature in a standalone <see cref="Features"/>, so that
+    /// links to it can be serialized here and invoked elsewhere.
+    /// </summary>
+    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <returns>This instance, so that calls can be chained.</returns>
+    /// <remarks>See <see cref="FeaturesBuilder.RegisterLinksTo{TFeature}"/>.</remarks>
+    /// <exception cref="ArgumentException">
+    /// <typeparamref name="TFeature"/> doesn't derive from <see cref="Feature{TFeature, TArgs, TResult}"/>
+    /// with itself as the first type argument.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Another registered feature has the same name, registration is closed, or this
+    /// <see cref="Features"/> is hosted.
+    /// </exception>
+    public Features RegisterLinksTo<TFeature>() where TFeature : class
+    {
+        EnsureRegistrationOpen().RegisterLinksTo<TFeature>();
+        return this;
+    }
+
     /// <summary>Registers services that features depend on, in a standalone <see cref="Features"/>.</summary>
     /// <param name="register">
     /// Adds registrations to the container's service collection. Any registration works, including
@@ -280,8 +301,9 @@ public class Features : IDisposable, IAsyncDisposable
     /// </para>
     /// <para>
     /// The options see features registered at any time before a link type is first serialized or
-    /// deserialized with them. Serializing a link to a feature that isn't registered throws
-    /// <see cref="NotSupportedException"/> rather than writing JSON that can't be read back.
+    /// deserialized with them. Serializing a link to a feature that isn't registered, neither itself nor
+    /// through <see cref="RegisterLinksTo{TFeature}"/>, throws <see cref="NotSupportedException"/> rather
+    /// than writing JSON that can't be read back.
     /// </para>
     /// <para>
     /// A feature whose outcomes differ in kind, such as fired or not found, can return a result with

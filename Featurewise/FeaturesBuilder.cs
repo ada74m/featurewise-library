@@ -74,6 +74,49 @@ public sealed class FeaturesBuilder
     /// </exception>
     public FeaturesBuilder RegisterFeature<TFeature>() where TFeature : class
     {
+        var featureTypeArguments = FeatureTypeArgumentsOf<TFeature>();
+
+        if (Services.Any(d => d.ServiceType == typeof(TFeature)))
+            throw new InvalidOperationException($"{typeof(TFeature).Name} is already registered");
+
+        AddToRegistry<TFeature>(featureTypeArguments);
+        Services.AddKeyedScoped<TFeature>(Features.FeatureKey);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a feature's links without the feature, so that links to it can be serialized here
+    /// and invoked elsewhere.
+    /// </summary>
+    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <returns>This builder, so that calls can be chained.</returns>
+    /// <remarks>
+    /// <para>
+    /// An entrypoint that registers only some features may still create links to others, as when a
+    /// feature puts a link on a queue for a worker that registers its feature. JSON options set up by
+    /// <see cref="Features.ConfigureJson"/> serialize only links to features they know of, so register
+    /// the links of every feature whose links leave this entrypoint without it.
+    /// </para>
+    /// <para>
+    /// Links registered this way serialize and deserialize like links to registered features, but
+    /// invoking one throws, as invoking any link to an unregistered feature does. Registering the
+    /// feature itself, before or after, is allowed, and registering its links again does nothing.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentException">
+    /// <typeparamref name="TFeature"/> doesn't derive from <see cref="Feature{TFeature, TArgs, TResult}"/>
+    /// with itself as the first type argument.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">Another registered feature has the same name.</exception>
+    public FeaturesBuilder RegisterLinksTo<TFeature>() where TFeature : class
+    {
+        AddToRegistry<TFeature>(FeatureTypeArgumentsOf<TFeature>());
+        return this;
+    }
+
+    // The type arguments TFeature passes to Feature<TFeature, TArgs, TResult>.
+    private static Type[] FeatureTypeArgumentsOf<TFeature>()
+    {
         // The compiler can't stop a feature naming another feature as itself,
         // e.g. Promote : Feature<Fire, Fire.Args, Fire.Result>, so check here.
         var featureTypeArguments = Features.GenericArgumentsOf(typeof(TFeature), typeof(Feature<,,>));
@@ -82,13 +125,13 @@ public sealed class FeaturesBuilder
             throw new ArgumentException(
                 $"{typeof(TFeature).Name} must derive from Feature<{typeof(TFeature).Name}, ...>, not Feature<{declaredSelf?.Name}, ...>");
 
-        if (Services.Any(d => d.ServiceType == typeof(TFeature)))
-            throw new InvalidOperationException($"{typeof(TFeature).Name} is already registered");
+        return featureTypeArguments!;
+    }
 
+    private void AddToRegistry<TFeature>(Type[] featureTypeArguments)
+    {
         var name = typeof(TFeature).GetCustomAttribute<FeatureNameAttribute>()?.Name ?? typeof(TFeature).Name;
-        Registry.Add(featureTypeArguments![1], name, featureTypeArguments[2]);
-        Services.AddKeyedScoped<TFeature>(Features.FeatureKey);
-        return this;
+        Registry.Add(featureTypeArguments[1], name, featureTypeArguments[2]);
     }
 
     /// <summary>Registers an authorization handler, which says who may invoke links to some features.</summary>

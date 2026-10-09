@@ -71,6 +71,20 @@ public class JsonTests
     }
 
     [Fact]
+    public void ALinkToAFeatureRegisteredOnlyForItsLinksRoundTrips()
+    {
+        using var features = new Features();
+        features.RegisterLinksTo<EmployeeReview>();
+        var options = features.ConfigureJson(new JsonSerializerOptions());
+
+        var json = JsonSerializer.Serialize<Link>(new EmployeeReview.Args("e1"), options);
+        var readBack = JsonSerializer.Deserialize<Link>(json, options);
+
+        Assert.Contains("\"$feature\":\"review-employee\"", json);
+        Assert.Equal(new EmployeeReview.Args("e1"), readBack);
+    }
+
+    [Fact]
     public void ALinkReadFromJsonWithoutACauseHasNone()
     {
         using var features = new Features();

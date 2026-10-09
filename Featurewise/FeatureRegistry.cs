@@ -12,8 +12,13 @@ internal sealed class FeatureRegistry
     private readonly Dictionary<Type, string> _featureNamesByArgsType = new();
     private readonly HashSet<Type> _resultTypes = new();
 
+    // Adding a feature again under the same name does nothing, so a feature's links can be registered
+    // before or after the feature itself.
     public void Add(Type argsType, string name, Type resultType)
     {
+        if (_featureNamesByArgsType.GetValueOrDefault(argsType) == name)
+            return;
+
         if (_featureNamesByArgsType.ContainsValue(name))
             throw new InvalidOperationException($"another registered feature is already named {name}");
 

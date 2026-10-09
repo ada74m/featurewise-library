@@ -118,6 +118,8 @@ Links leave the process and come back. `ConfigureJson` sets up JSON options so t
 
 The `$feature` property names the feature, so a general endpoint can read any link as `Link` and invoke it without knowing what it is. A feature's name is its class name, or the name in its `[FeatureName]` attribute, which lets the class be renamed without breaking links already handed out. Results with cases carry a `$case` property the same way.
 
+The options know the features registered with `Features`. An entrypoint that registers only some features can still send links to the rest: `RegisterLinksTo<HandleEmployeeLeft>()` lets its links be written and read here, while invoking one still fails, because the feature runs elsewhere.
+
 Reading a link checks its arguments against their types. A missing required argument, or `null` where the type forbids it, fails with a `JsonException` before the link reaches authorization or the feature.
 
 A link can outlive the code that made it: a browser tab holds it across a deployment, a queue holds it through one. Change arguments compatibly. Adding a nullable or defaulted argument is safe. Removing, renaming or requiring one takes two releases.

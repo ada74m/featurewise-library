@@ -18,6 +18,35 @@ public class RegistrationTests
     }
 
     [Fact]
+    public async Task InvokingALinkRegisteredWithoutItsFeatureThrows()
+    {
+        await using var features = new Features();
+        features.RegisterLinksTo<Fire>().RegisterAuthorizationHandler<FireAuthorization>();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => features.Invoke(new Fire.Args("e1"), Callers.Manager));
+    }
+
+    [Fact]
+    public async Task AFeatureCanBeRegisteredBeforeOrAfterItsLinks()
+    {
+        await using var features = new Features();
+        features
+            .RegisterLinksTo<Fire>()
+            .RegisterFeature<Fire>()
+            .RegisterLinksTo<Fire>()
+            .RegisterAuthorizationHandler<FireAuthorization>();
+
+        Assert.Equal(new Fire.Result.Fired(), await features.Invoke(new Fire.Args("e1"), Callers.Manager));
+    }
+
+    [Fact]
+    public void RegisteringLinksToAFeatureThatNamesAnotherFeatureAsItselfThrows()
+    {
+        using var features = new Features();
+        Assert.Throws<ArgumentException>(() => features.RegisterLinksTo<Promote>());
+    }
+
+    [Fact]
     public void RegisteringAFeatureThatNamesAnotherFeatureAsItselfThrows()
     {
         using var features = new Features();
