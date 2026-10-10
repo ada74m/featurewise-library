@@ -14,10 +14,12 @@ module "core" {
 module "queue_worker" {
   source = "../SampleService.QueueWorker/Infrastructure"
 
-  name_prefix           = var.name_prefix
-  publish_dir           = "${local.artifacts_dir}/SampleService.QueueWorker"
-  employees_table_name  = module.core.employees_table_name
-  employees_policy_json = module.core.employees_policy_json
+  name_prefix                = var.name_prefix
+  publish_dir                = "${local.artifacts_dir}/SampleService.QueueWorker"
+  employees_table_name       = module.core.employees_table_name
+  employees_policy_json      = module.core.employees_policy_json
+  events_topic_arn           = module.core.events_topic_arn
+  events_publish_policy_json = module.core.events_publish_policy_json
   topic_adapters = var.directory_events_topic_arn == null ? {} : {
     (var.directory_events_topic_arn) = "directory"
   }
@@ -26,14 +28,14 @@ module "queue_worker" {
 module "ui_backend" {
   source = "../SampleService.UiBackend/Infrastructure"
 
-  name_prefix           = var.name_prefix
-  publish_dir           = "${local.artifacts_dir}/SampleService.UiBackend"
-  employees_table_name  = module.core.employees_table_name
-  employees_policy_json = module.core.employees_policy_json
-  work_queue_url        = module.queue_worker.work_queue_url
-  work_queue_arn        = module.queue_worker.work_queue_arn
-  jwt_issuer            = var.jwt_issuer
-  jwt_audience          = var.jwt_audience
+  name_prefix                = var.name_prefix
+  publish_dir                = "${local.artifacts_dir}/SampleService.UiBackend"
+  employees_table_name       = module.core.employees_table_name
+  employees_policy_json      = module.core.employees_policy_json
+  events_topic_arn           = module.core.events_topic_arn
+  events_publish_policy_json = module.core.events_publish_policy_json
+  jwt_issuer                 = var.jwt_issuer
+  jwt_audience               = var.jwt_audience
 }
 
 module "public_api" {
@@ -54,6 +56,8 @@ module "scheduled_worker" {
   publish_dir           = "${local.artifacts_dir}/SampleService.ScheduledWorker"
   employees_table_name  = module.core.employees_table_name
   employees_policy_json = module.core.employees_policy_json
+  work_queue_url        = module.queue_worker.work_queue_url
+  work_queue_arn        = module.queue_worker.work_queue_arn
   timezone              = var.timezone
   schedules = {
     review-reminders = {

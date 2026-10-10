@@ -17,13 +17,14 @@ variable "employees_policy_json" {
   type        = string
 }
 
-variable "work_queue_url" {
-  description = "The queue features send links to, such as Fire's link to HandleEmployeeLeft."
+variable "events_topic_arn" {
+  description = "The service's topic, where its features publish its events."
   type        = string
 }
 
-variable "work_queue_arn" {
-  type = string
+variable "events_publish_policy_json" {
+  description = "Grants publishing to the service's topic."
+  type        = string
 }
 
 variable "jwt_issuer" {

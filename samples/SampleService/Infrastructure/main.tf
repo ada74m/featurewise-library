@@ -15,6 +15,18 @@ resource "aws_dynamodb_table" "employees" {
   }
 }
 
+# The service's topic, where it publishes its events, the records in Events/. Other services subscribe.
+resource "aws_sns_topic" "events" {
+  name = "${var.name_prefix}-events"
+}
+
+data "aws_iam_policy_document" "events_publish" {
+  statement {
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.events.arn]
+  }
+}
+
 # What DynamoEmployeeStore does, for each function's policy.
 data "aws_iam_policy_document" "employees" {
   statement {

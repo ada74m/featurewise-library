@@ -17,10 +17,11 @@ public class EmployeeFeatureTests
         Assert.Equal(
             new Employee(hired.EmployeeId, "Ann", "m1", EmploymentStatus.Active, Fakes.Today.AddMonths(3)),
             _fakes.Employees[hired.EmployeeId]);
+        Assert.Equal([new EmployeeHired(hired.EmployeeId, "Ann", "m1", Fakes.Today)], _fakes.Events.Published);
     }
 
     [Fact]
-    public async Task HiringAgainWithTheSameIdempotencyKeyHiresOnce()
+    public async Task HiringAgainWithTheSameIdempotencyKeyHiresOnceAndPublishesTheSameEventAgain()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
             .RegisterFeature<Hire, Hire.Rule>());
@@ -31,6 +32,8 @@ public class EmployeeFeatureTests
 
         Assert.Equal(first, retry);
         Assert.Equal(staff + 1, _fakes.Employees.Count);
+        Assert.Equal(2, _fakes.Events.Published.Count);
+        Assert.Equal(_fakes.Events.Published[0], _fakes.Events.Published[1]);
     }
 
     [Fact]
@@ -40,29 +43,30 @@ public class EmployeeFeatureTests
             .RegisterFeature<Hire, Hire.Rule>());
 
         Assert.Equal(new Hire.Result.ManagerNotFound("e3"), await features.Invoke(new Hire.Args("Ann", "e3"), Callers.Manager));
+        Assert.Empty(_fakes.Events.Published);
     }
 
     [Fact]
-    public async Task FiringRecordsTheDepartureAndQueuesTellingPayroll()
+    public async Task FiringRecordsTheDepartureAndPublishesThatTheyLeft()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<Fire, Fire.Rule>().RegisterLinksTo<HandleEmployeeLeft>());
+            .RegisterFeature<Fire, Fire.Rule>());
 
         var result = await features.Invoke(new Fire.Args("e1"), Callers.Manager);
 
         Assert.Equal(new Fire.Result.Fired(), result);
         Assert.Equal(Staff.Ed with { Status = EmploymentStatus.Left, LeftOn = Fakes.Today }, _fakes.Employees["e1"]);
-        Assert.Contains("\"$feature\":\"HandleEmployeeLeft\",\"EmployeeId\":\"e1\"", Assert.Single(_fakes.QueuedMessages));
+        Assert.Equal([new EmployeeLeft("e1", Fakes.Today)], _fakes.Events.Published);
     }
 
     [Fact]
-    public async Task FiringSomeoneWhoHasLeftSaysSoAndQueuesNothing()
+    public async Task FiringSomeoneWhoHasLeftSaysSoAndPublishesNothing()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<Fire, Fire.Rule>().RegisterLinksTo<HandleEmployeeLeft>());
+            .RegisterFeature<Fire, Fire.Rule>());
 
         Assert.Equal(new Fire.Result.AlreadyLeft(), await features.Invoke(new Fire.Args("e4"), Callers.Manager));
-        Assert.Empty(_fakes.QueuedMessages);
+        Assert.Empty(_fakes.Events.Published);
     }
 
     [Fact]
@@ -70,8 +74,7 @@ public class EmployeeFeatureTests
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
             .RegisterFeature<EmployeeDetails, AnySignedInCaller<EmployeeDetails.Args>>()
-            .RegisterFeature<Fire, Fire.Rule>()
-            .RegisterLinksTo<HandleEmployeeLeft>());
+            .RegisterFeature<Fire, Fire.Rule>());
 
         var managers = await features.Invoke(new EmployeeDetails.Args("e2"), Callers.Manager);
         var employees = await features.Invoke(new EmployeeDetails.Args("e2"), Callers.Employee);

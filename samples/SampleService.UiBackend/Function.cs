@@ -33,9 +33,7 @@ public class Function
             .RegisterFeature<EmployeeDetails, AnySignedInCaller<EmployeeDetails.Args>>()
             .RegisterFeature<ReviewsDue, AnySignedInCaller<ReviewsDue.Args>>()
             .RegisterFeature<Hire, Hire.Rule>()
-            .RegisterFeature<Fire, Fire.Rule>()
-            // Fire queues a link to HandleEmployeeLeft, which the QueueWorker invokes.
-            .RegisterLinksTo<HandleEmployeeLeft>();
+            .RegisterFeature<Fire, Fire.Rule>();
         Offer<EmployeeDetails>();
         Offer<ReviewsDue>();
         Offer<Hire>();

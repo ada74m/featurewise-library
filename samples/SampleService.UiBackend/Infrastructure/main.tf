@@ -1,12 +1,8 @@
 # The UI backend: an HTTP API whose one route, POST /{feature}, reaches one function.
 
+# Hire and Fire publish events.
 data "aws_iam_policy_document" "function" {
-  source_policy_documents = [var.employees_policy_json]
-
-  statement {
-    actions   = ["sqs:SendMessage"]
-    resources = [var.work_queue_arn]
-  }
+  source_policy_documents = [var.employees_policy_json, var.events_publish_policy_json]
 }
 
 module "function" {
@@ -17,8 +13,8 @@ module "function" {
   handler     = "SampleService.UiBackend::SampleService.UiBackend.Function::Handle"
   policy_json = data.aws_iam_policy_document.function.json
   environment = {
-    EMPLOYEES_TABLE = var.employees_table_name
-    WORK_QUEUE_URL  = var.work_queue_url
+    EMPLOYEES_TABLE  = var.employees_table_name
+    EVENTS_TOPIC_ARN = var.events_topic_arn
   }
 }
 

@@ -14,7 +14,9 @@ public class Fakes
     // The JSON of each link sent to the queue, as SQS would receive it.
     public List<string> QueuedMessages { get; } = [];
 
-    public CapturingNotifier Notifier { get; } = new();
+    public CapturingMessenger Messenger { get; } = new();
+
+    public CapturingEventPublisher Events { get; } = new();
 
     public void Register(IServiceCollection services)
     {
@@ -22,7 +24,8 @@ public class Fakes
         services.AddSingleton<IEmployeeStore>(Employees);
         services.AddSingleton<IWorkQueue>(provider =>
             new CapturingWorkQueue(provider.GetRequiredService<JsonSerializerOptions>(), QueuedMessages));
-        services.AddSingleton<INotifier>(Notifier);
+        services.AddSingleton<IMessenger>(Messenger);
+        services.AddSingleton<IEventPublisher>(Events);
         services.AddSingleton<TimeProvider>(new FixedTime(Today));
     }
 

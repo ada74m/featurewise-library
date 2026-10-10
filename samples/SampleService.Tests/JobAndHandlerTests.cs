@@ -7,15 +7,39 @@ public class JobAndHandlerTests
     private readonly Fakes _fakes = new Fakes().WithStaff();
 
     [Fact]
-    public async Task SendReviewRemindersTellsManagersOfReviewsDueThisWeek()
+    public async Task SendReviewRemindersQueuesAReminderForEachManagerWithReviewsDueThisWeek()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>());
+            .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>()
+            .RegisterLinksTo<RemindManagerOfReviews>());
 
         var result = await features.Invoke(new SendReviewReminders.Args(), Callers.Job);
 
         Assert.Equal(new SendReviewReminders.Result(1), result);
-        Assert.Equal([("m1", "Ed's review is due on 2026-10-13")], _fakes.Notifier.Sent);
+        Assert.Contains("\"$feature\":\"RemindManagerOfReviews\",\"ManagerId\":\"m1\"", Assert.Single(_fakes.QueuedMessages));
+    }
+
+    [Fact]
+    public async Task AReminderListsTheManagersReviewsDueThisWeekInOneMessage()
+    {
+        _fakes.Employees.Add(Staff.Eve with { ReviewDue = Fakes.Today.AddDays(2) });
+        await using var features = ServiceFeatures.Over(_fakes, f => f
+            .RegisterFeature<RemindManagerOfReviews, AnySystemCaller<RemindManagerOfReviews.Args>>());
+
+        var result = await features.Invoke(new RemindManagerOfReviews.Args("m1"), Callers.Job);
+
+        Assert.Equal(new RemindManagerOfReviews.Result(2), result);
+        Assert.Equal([("m1", "Reviews due: Eve on 2026-10-10, Ed on 2026-10-13")], _fakes.Messenger.Sent);
+    }
+
+    [Fact]
+    public async Task AReminderForAManagerWithNothingDueSendsNothing()
+    {
+        await using var features = ServiceFeatures.Over(_fakes, f => f
+            .RegisterFeature<RemindManagerOfReviews, AnySystemCaller<RemindManagerOfReviews.Args>>());
+
+        Assert.Equal(new RemindManagerOfReviews.Result(0), await features.Invoke(new RemindManagerOfReviews.Args("e1"), Callers.Job));
+        Assert.Empty(_fakes.Messenger.Sent);
     }
 
     [Fact]
@@ -32,21 +56,10 @@ public class JobAndHandlerTests
     }
 
     [Fact]
-    public async Task HandleEmployeeLeftTellsPayroll()
-    {
-        await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<HandleEmployeeLeft, AnySystemCaller<HandleEmployeeLeft.Args>>());
-
-        Assert.Same(Nil.Value, await features.Invoke(new HandleEmployeeLeft.Args("e4"), Callers.Job));
-        Assert.Equal([("payroll", "Lou (e4) has left: close their payroll")], _fakes.Notifier.Sent);
-    }
-
-    [Fact]
     public async Task ADeactivatedAccountRecordsTheDepartureOfAnActiveEmployeeOnly()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<HandleAccountDeactivated, AnySystemCaller<HandleAccountDeactivated.Args>>()
-            .RegisterLinksTo<HandleEmployeeLeft>());
+            .RegisterFeature<HandleAccountDeactivated, AnySystemCaller<HandleAccountDeactivated.Args>>());
 
         var active = await features.Invoke(new HandleAccountDeactivated.Args("e1"), Callers.Job);
         var left = await features.Invoke(new HandleAccountDeactivated.Args("e4"), Callers.Job);
@@ -56,16 +69,17 @@ public class JobAndHandlerTests
         Assert.Equal(new HandleAccountDeactivated.Result.AlreadyLeft(), left);
         Assert.Equal(new HandleAccountDeactivated.Result.UnknownEmployee("x9"), unknown);
         Assert.Equal(EmploymentStatus.Left, _fakes.Employees["e1"]!.Status);
-        Assert.Single(_fakes.QueuedMessages);
+        Assert.Equal([new EmployeeLeft("e1", Fakes.Today)], _fakes.Events.Published);
     }
 
     [Fact]
     public async Task OnlyTheServicesOwnJobsAndWorkersMayInvokeThem()
     {
         await using var features = ServiceFeatures.Over(_fakes, f => f
-            .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>());
+            .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>()
+            .RegisterLinksTo<RemindManagerOfReviews>());
 
         await Assert.ThrowsAsync<InvocationDeniedException>(() => features.Invoke(new SendReviewReminders.Args(), Callers.Manager));
-        Assert.Empty(_fakes.Notifier.Sent);
+        Assert.Empty(_fakes.QueuedMessages);
     }
 }

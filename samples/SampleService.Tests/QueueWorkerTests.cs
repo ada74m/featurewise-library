@@ -1,4 +1,5 @@
-﻿using SampleService.QueueWorker;
+﻿using System.Text;
+using SampleService.QueueWorker;
 
 namespace SampleService.Tests;
 
@@ -15,10 +16,10 @@ public class QueueWorkerTests
     public async Task ALinkTheServiceQueuedIsInvoked()
     {
         var response = await _worker.Handle(
-            Lambda.Messages(("m-1", """{"$feature":"HandleEmployeeLeft","EmployeeId":"e4"}""")), Lambda.Context());
+            Lambda.Messages(("m-1", """{"$feature":"RemindManagerOfReviews","ManagerId":"m1"}""")), Lambda.Context());
 
         Assert.Empty(response.BatchItemFailures);
-        Assert.Equal([("payroll", "Lou (e4) has left: close their payroll")], _fakes.Notifier.Sent);
+        Assert.Equal([("m1", "Reviews due: Ed on 2026-10-13")], _fakes.Messenger.Sent);
     }
 
     [Fact]
@@ -30,7 +31,7 @@ public class QueueWorkerTests
 
         Assert.Empty(response.BatchItemFailures);
         Assert.Equal(EmploymentStatus.Left, _fakes.Employees["e1"]!.Status);
-        Assert.Contains("\"$feature\":\"HandleEmployeeLeft\"", Assert.Single(_fakes.QueuedMessages));
+        Assert.Equal([new EmployeeLeft("e1", Fakes.Today)], _fakes.Events.Published);
     }
 
     [Fact]
@@ -41,14 +42,14 @@ public class QueueWorkerTests
         var response = await _worker.Handle(Lambda.Messages(("m-1", envelope)), Lambda.Context());
 
         Assert.Empty(response.BatchItemFailures);
-        Assert.Empty(_fakes.QueuedMessages);
+        Assert.Empty(_fakes.Events.Published);
     }
 
     [Fact]
     public async Task OnlyTheMessagesThatFailAreReported()
     {
         var response = await _worker.Handle(Lambda.Messages(
-            ("good", """{"$feature":"HandleEmployeeLeft","EmployeeId":"e4"}"""),
+            ("good", """{"$feature":"RemindManagerOfReviews","ManagerId":"m1"}"""),
             ("unreadable", "not json"),
             ("unknown-topic", Lambda.SnsEnvelope("arn:aws:sns:eu-west-2:123456789012:other", "sns-2", "{}")),
             ("not-here", """{"$feature":"Fire","EmployeeId":"e1"}"""),
@@ -58,18 +59,19 @@ public class QueueWorkerTests
         Assert.Equal(
             ["unreadable", "unknown-topic", "not-here", "bad-event"],
             response.BatchItemFailures.Select(f => f.ItemIdentifier));
-        Assert.Single(_fakes.Notifier.Sent);
+        Assert.Single(_fakes.Messenger.Sent);
     }
 
     [Fact]
-    public async Task AFiringThroughTheUiBackendIsHandledByTheQueueWorker()
+    public async Task RemindersTheScheduledWorkerQueuesAreSentByTheQueueWorker()
     {
-        var uiBackend = new UiBackend.Function(_fakes.Register);
-        await uiBackend.Handle(Lambda.Post("Fire", Lambda.Manager, """{"EmployeeId":"e1"}"""), Lambda.Context());
+        var scheduler = new ScheduledWorker.Function(_fakes.Register);
+        var input = """{"Schedule":"arn:aws:scheduler:eu-west-2:123456789012:schedule/default/review-reminders","Link":{"$feature":"SendReviewReminders"}}""";
+        await scheduler.Handle(new MemoryStream(Encoding.UTF8.GetBytes(input)), Lambda.Context());
 
         var response = await _worker.Handle(Lambda.Messages(("m-1", Assert.Single(_fakes.QueuedMessages))), Lambda.Context());
 
         Assert.Empty(response.BatchItemFailures);
-        Assert.Equal([("payroll", "Ed (e1) has left: close their payroll")], _fakes.Notifier.Sent);
+        Assert.Equal([("m1", "Reviews due: Ed on 2026-10-13")], _fakes.Messenger.Sent);
     }
 }

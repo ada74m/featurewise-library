@@ -2,25 +2,27 @@
 
 namespace SampleService;
 
-// Reminds managers of their reports' reviews due within a week. A schedule runs it daily, so a
-// manager hears about a review each day until it's done.
-public class SendReviewReminders(IEmployeeStore employees, INotifier notifier, TimeProvider time)
+// Queues a reminder for each manager with reports' reviews due within a week, for the queue worker to
+// send. A schedule runs it daily, so a manager hears each day until the reviews are done, and one
+// manager's failed reminder is retried alone.
+public class SendReviewReminders(IEmployeeStore employees, IWorkQueue queue, TimeProvider time)
     : Feature<SendReviewReminders, SendReviewReminders.Args, SendReviewReminders.Result>
 {
     public record Args : Link<SendReviewReminders, Result>;
 
-    public record Result(int Reminded);
+    public record Result(int Managers);
 
     public override async Task<Result> Invoke(Args args, CancellationToken cancellationToken)
     {
-        var horizon = time.Today().AddDays(7);
-        var due = (await employees.All(cancellationToken))
-            .Where(e => e.Status == EmploymentStatus.Active && e.ManagerId is not null && e.ReviewDue <= horizon)
+        var managers = (await employees.All(cancellationToken))
+            .Where(e => RemindManagerOfReviews.IsDue(e, time))
+            .Select(e => e.ManagerId!)
+            .Distinct()
             .ToList();
 
-        foreach (var employee in due)
-            await notifier.Notify(employee.ManagerId!, $"{employee.Name}'s review is due on {employee.ReviewDue:O}", cancellationToken);
+        foreach (var manager in managers)
+            await queue.Send(new RemindManagerOfReviews.Args(manager), cancellationToken);
 
-        return new Result(due.Count);
+        return new Result(managers.Count);
     }
 }

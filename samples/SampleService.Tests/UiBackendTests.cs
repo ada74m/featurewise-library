@@ -72,7 +72,7 @@ public class UiBackendTests
     [Fact]
     public async Task AFeatureTheUiBackendDoesntOfferIsNotFound()
     {
-        var handler = await Handle(Lambda.Post("HandleEmployeeLeft", Lambda.Manager, """{"EmployeeId":"e1"}"""));
+        var handler = await Handle(Lambda.Post("RemindManagerOfReviews", Lambda.Manager, """{"ManagerId":"m1"}"""));
         var nothing = await Handle(Lambda.Post("Nothing", Lambda.Manager, null));
 
         Assert.Equal((int)HttpStatusCode.NotFound, handler.StatusCode);

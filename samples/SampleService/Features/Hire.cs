@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace SampleService;
 
-// Hires someone. With an idempotency key, a retried request hires them once: the key decides their id.
-public class Hire(IEmployeeStore employees, Invocation invocation, TimeProvider time) : Feature<Hire, Hire.Args, Hire.Result>
+// Hires someone, and publishes that they've joined. With an idempotency key, a retried request hires them
+// once, since the key decides their id, and publishes the same event again, which subscribers drop as a
+// duplicate. Publishing again also recovers an event a failed attempt didn't publish.
+public class Hire(IEmployeeStore employees, IEventPublisher events, Invocation invocation, TimeProvider time) : Feature<Hire, Hire.Args, Hire.Result>
 {
     public record Args(string Name, string? ManagerId) : Link<Hire, Result>;
 
@@ -40,11 +42,12 @@ public class Hire(IEmployeeStore employees, Invocation invocation, TimeProvider 
             return new Result.ManagerNotFound(args.ManagerId);
 
         var id = invocation.IdempotencyKey is { } key ? IdFrom(key) : Guid.NewGuid().ToString("N");
+        var hiredOn = time.Today();
         if (await employees.Find(id, cancellationToken) is null)
-        {
-            var firstReview = time.Today().AddMonths(3);
-            await employees.Save(new Employee(id, args.Name, args.ManagerId, EmploymentStatus.Active, firstReview), cancellationToken);
-        }
+            await employees.Save(
+                new Employee(id, args.Name, args.ManagerId, EmploymentStatus.Active, hiredOn.AddMonths(3)), cancellationToken);
+
+        await events.Publish(new EmployeeHired(id, args.Name, args.ManagerId, hiredOn), cancellationToken);
 
         return new Result.Hired(id);
     }

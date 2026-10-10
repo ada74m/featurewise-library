@@ -1,15 +1,26 @@
 # The scheduled worker: one function, invoked by an EventBridge schedule per job.
 
+# SendReviewReminders queues a reminder for each manager.
+data "aws_iam_policy_document" "function" {
+  source_policy_documents = [var.employees_policy_json]
+
+  statement {
+    actions   = ["sqs:SendMessage"]
+    resources = [var.work_queue_arn]
+  }
+}
+
 module "function" {
   source = "../../Infrastructure/modules/lambda-function"
 
   name        = "${var.name_prefix}-scheduled-worker"
   publish_dir = var.publish_dir
   handler     = "SampleService.ScheduledWorker::SampleService.ScheduledWorker.Function::Handle"
-  policy_json = var.employees_policy_json
+  policy_json = data.aws_iam_policy_document.function.json
   timeout     = 300
   environment = {
     EMPLOYEES_TABLE = var.employees_table_name
+    WORK_QUEUE_URL  = var.work_queue_url
   }
 }
 

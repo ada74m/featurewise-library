@@ -18,7 +18,7 @@ public class ScheduledWorkerTests
     {
         await Handle($$$"""{"Schedule":"{{{ScheduleArn}}}","Execution":"x1","Link":{"$feature":"SendReviewReminders"}}""");
 
-        Assert.Equal([("m1", "Ed's review is due on 2026-10-13")], _fakes.Notifier.Sent);
+        Assert.Contains("\"$feature\":\"RemindManagerOfReviews\",\"ManagerId\":\"m1\"", Assert.Single(_fakes.QueuedMessages));
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class ScheduledWorkerTests
     public async Task AnInputThatDoesntNameOneOfTheWorkersJobsFails(string input)
     {
         await Assert.ThrowsAsync<JsonException>(() => Handle(input));
-        Assert.Empty(_fakes.Notifier.Sent);
+        Assert.Empty(_fakes.QueuedMessages);
     }
 
     private Task Handle(string input) =>

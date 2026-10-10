@@ -36,7 +36,7 @@ public class Function
             .ToDictionary(pair => pair[0], pair => Adapters[pair[1]]);
 
         _features
-            .RegisterFeature<HandleEmployeeLeft, AnySystemCaller<HandleEmployeeLeft.Args>>()
+            .RegisterFeature<RemindManagerOfReviews, AnySystemCaller<RemindManagerOfReviews.Args>>()
             .RegisterFeature<HandleAccountDeactivated, AnySystemCaller<HandleAccountDeactivated.Args>>();
 
         _json = _features.ConfigureJson(new JsonSerializerOptions());

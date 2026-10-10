@@ -20,7 +20,10 @@ public class Function
     {
         _features
             .RegisterFeature<SendReviewReminders, AnySystemCaller<SendReviewReminders.Args>>()
-            .RegisterFeature<ArchiveLeavers, AnySystemCaller<ArchiveLeavers.Args>>();
+            .RegisterFeature<ArchiveLeavers, AnySystemCaller<ArchiveLeavers.Args>>()
+            // SendReviewReminders queues a link to RemindManagerOfReviews for each manager, which the
+            // QueueWorker invokes.
+            .RegisterLinksTo<RemindManagerOfReviews>();
 
         _json = _features.ConfigureJson(new JsonSerializerOptions());
 

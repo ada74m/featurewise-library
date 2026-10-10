@@ -17,6 +17,15 @@ variable "employees_policy_json" {
   type        = string
 }
 
+variable "work_queue_url" {
+  description = "The queue jobs send links to, such as SendReviewReminders' reminder for each manager."
+  type        = string
+}
+
+variable "work_queue_arn" {
+  type = string
+}
+
 variable "schedules" {
   description = "The jobs to run, by schedule name: each schedule's expression, and its job's link as JSON, such as jsonencode({ \"$feature\" = \"ArchiveLeavers\", AfterDays = 90 })."
   type = map(object({

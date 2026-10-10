@@ -17,17 +17,12 @@ resource "aws_sqs_queue" "work" {
   })
 }
 
+# HandleAccountDeactivated publishes events.
 data "aws_iam_policy_document" "function" {
-  source_policy_documents = [var.employees_policy_json]
+  source_policy_documents = [var.employees_policy_json, var.events_publish_policy_json]
 
   statement {
     actions   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
-    resources = [aws_sqs_queue.work.arn]
-  }
-
-  # Handlers queue links too, such as HandleAccountDeactivated's link to HandleEmployeeLeft.
-  statement {
-    actions   = ["sqs:SendMessage"]
     resources = [aws_sqs_queue.work.arn]
   }
 }
@@ -40,9 +35,9 @@ module "function" {
   handler     = "SampleService.QueueWorker::SampleService.QueueWorker.Function::Handle"
   policy_json = data.aws_iam_policy_document.function.json
   environment = {
-    EMPLOYEES_TABLE = var.employees_table_name
-    WORK_QUEUE_URL  = aws_sqs_queue.work.url
-    TOPIC_ADAPTERS  = join(";", [for topic, adapter in var.topic_adapters : "${topic}=${adapter}"])
+    EMPLOYEES_TABLE  = var.employees_table_name
+    EVENTS_TOPIC_ARN = var.events_topic_arn
+    TOPIC_ADAPTERS   = join(";", [for topic, adapter in var.topic_adapters : "${topic}=${adapter}"])
   }
 }
 

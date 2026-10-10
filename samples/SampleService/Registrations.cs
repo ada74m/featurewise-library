@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
 using Amazon.DynamoDBv2;
+using Amazon.SimpleNotificationService;
 using Amazon.SQS;
+using Featurewise;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -31,7 +33,10 @@ public static class Registrations
             new DynamoEmployeeStore(provider.GetRequiredService<IAmazonDynamoDB>(), Setting("EMPLOYEES_TABLE")));
         services.AddSingleton<IWorkQueue>(provider => new SqsWorkQueue(
             provider.GetRequiredService<IAmazonSQS>(), provider.GetRequiredService<JsonSerializerOptions>(), Setting("WORK_QUEUE_URL")));
-        services.AddSingleton<INotifier, LoggingNotifier>();
+        services.AddSingleton<IAmazonSimpleNotificationService>(_ => new AmazonSimpleNotificationServiceClient());
+        services.AddScoped<IEventPublisher>(provider => new SnsEventPublisher(
+            provider.GetRequiredService<IAmazonSimpleNotificationService>(), provider.GetRequiredService<Invocation>(), Setting("EVENTS_TOPIC_ARN")));
+        services.AddSingleton<IMessenger, LoggingMessenger>();
     }
 
     private static string Setting(string name) =>

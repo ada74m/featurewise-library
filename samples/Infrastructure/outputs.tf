@@ -26,3 +26,8 @@ output "dead_letter_queue_url" {
 output "employees_table_name" {
   value = module.core.employees_table_name
 }
+
+output "events_topic_arn" {
+  description = "The service's topic, which other services subscribe to for its events."
+  value       = module.core.events_topic_arn
+}
