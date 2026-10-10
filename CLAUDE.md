@@ -28,7 +28,7 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 
 ## Conventions
 
-- One type per file, except generic arities of one name, which share a file (`Link.cs`, `IFeature.cs`), and a sample facility's interface and its implementation, which share a file named after the interface without the `I` (`IEmployeeStore` and `DynamoEmployeeStore` in `Facilities/EmployeeStore.cs`).
+- One type per file, except generic arities of one name, which share a file (`Link.cs`, `IFeature.cs`).
 - Feature names: commands are verb phrases, queries are noun phrases, event handlers are `Handle` plus the event. In the tests, `EmployeeSearch` is a query, `Remind` a command and `HandleEmployeeLeft` an event handler.
 - Prose (README, XML docs) is in classic style: direct, no metadiscourse, no hedging.
 
@@ -46,9 +46,9 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 - **JSON** (`FeatureRegistry.ConfigureJson`): adds type-info modifiers that make link types polymorphic with a `$feature` discriminator (`<service>/<feature name>`, the name from the class name or `[FeatureName]`), enforce required/non-null link arguments on read (links only, so host types are unaffected), and make registered result types with cases polymorphic with a `$case` discriminator. Cases are public non-abstract types nested in an abstract result type; they should stay unsealed.
 - `Features` registers its own `ActivityListener` so every invocation gets an activity id even without OpenTelemetry.
 
-## Samples
+## Package
 
-`samples/` holds SampleService, an HR service on AWS Lambda that uses the library as a real service would (`samples/README.md`): a core project, one project per entrypoint (`UiBackend` for the service's own UI, `PublicApi` for third parties, with its contract in `openapi.yaml`, `ScheduledWorker`, `QueueWorker`), each registering only the features it invokes, and `SampleService.Tests`, which drives each entrypoint with fake Lambda events over in-memory fakes. In the core, `Models/` holds domain models (`Employee`), `Events/` the events the service publishes to its SNS topic (a standard folder, so a service's events can be found at a glance), `Features/` the features, each with its rule nested in it when it has one of its own, and `Facilities/` whatever else supports the features (stores, the work queue, the event publisher, the messenger, shared services such as `LeaverRecorder`); all share the `SampleService` namespace. Each project keeps its Terraform in its own `Infrastructure/` module; `samples/Infrastructure/` is the service's module, which wires them together and has no provider or state. `samples/package.sh <version> <out>` builds the service's package (modules plus `functions/*.zip`), which environments use as `s3::https://…/hr/<version>.zip//Infrastructure`; `samples/DevEnvironment/` is a developer's own root using the locally built package (`deploy.sh`), while real environments live in the separate `estate-environments` repo. `.github/workflows/ci.yml` builds, tests, checks Terraform and packages on every PR and push, and publishes from main. Check Terraform with `terraform fmt -check -recursive samples` and, in `samples/Infrastructure`, `terraform init -backend=false && terraform validate` (and in `samples/DevEnvironment` after `samples/package.sh dev samples/out`); never `plan` or `apply` against AWS unasked.
+The library ships as the NuGet package `Featurewise.Core` (its namespace stays `Featurewise`), published to GitHub Packages at `https://nuget.pkg.github.com/ada74m/index.json`. `Featurewise/Featurewise.csproj` holds the package's metadata: versions are `0.1.0-preview.<run>` from CI and `0.1.0-dev` from a local `dotnet pack Featurewise -c Release`. `.github/workflows/ci.yml` builds warning-free and tests on every pull request and push; each push to main also packs and publishes a preview. Services pin a version, such as the HR sample in the separate `hr-service` repo, so a change one of them needs here means publishing a preview and bumping its pin; `hr-service` can also build against a local checkout of this repo.
 
 ## Tests
 

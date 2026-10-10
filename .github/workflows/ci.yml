@@ -1,6 +1,5 @@
-# Builds and tests the library and the hr service on every pull request and push to main, and checks
-# the service's Terraform. Each push to main also publishes the service's package, versioned by date
-# and run, to the estate's artifacts bucket, and tags the commit with that version.
+# Builds and tests the library on every pull request and push to main. Each push to main also packs the
+# library as a preview of Featurewise.Core and publishes it to this account's GitHub Packages feed.
 name: CI
 
 on:
@@ -14,8 +13,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
+    permissions:
+      contents: write
+      packages: write
+    env:
+      VERSION_SUFFIX: preview.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v7
 
@@ -24,72 +26,28 @@ jobs:
           global-json-file: global.json
 
       - name: Build, warning-free
-        run: dotnet build FeaturewiseProto.sln -warnaserror
+        run: dotnet build FeaturewiseProto.sln -warnaserror -p:ContinuousIntegrationBuild=true
 
       - name: Test
         run: dotnet test FeaturewiseProto.sln --no-build
 
-      - uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: 1.14.4
-
-      - name: Check Terraform formatting
-        run: terraform fmt -check -recursive samples
-
-      - name: Validate the service module
-        working-directory: samples/Infrastructure
-        run: terraform init -backend=false -input=false && terraform validate
-
-      # Pull requests get a version too, so their package can be inspected, but only main's are published.
-      - name: Choose a version
-        id: version
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = push ]; then
-            echo "version=$(date -u +%Y.%m.%d).$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=pr${{ github.event.number }}.$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Package
-        run: samples/package.sh "${{ steps.version.outputs.version }}" samples/out
-
-      - name: Validate the dev environment against the package
-        working-directory: samples/DevEnvironment
-        run: terraform init -backend=false -input=false && terraform validate
+      - name: Pack
+        run: dotnet pack Featurewise -c Release -o out -p:VersionSuffix="$VERSION_SUFFIX" -p:ContinuousIntegrationBuild=true
 
       - uses: actions/upload-artifact@v7
         with:
-          name: hr-${{ steps.version.outputs.version }}
-          path: samples/out/hr-${{ steps.version.outputs.version }}.zip
+          name: Featurewise.Core
+          path: out/*.nupkg
           if-no-files-found: error
 
-  # Needs the estate's bootstrap: the repository variables AWS_REGION, ARTIFACTS_BUCKET and
-  # PUBLISH_ROLE_ARN, and the role it names, which trusts only this repository's main branch.
-  publish:
-    needs: build
-    if: github.event_name == 'push' && vars.ARTIFACTS_BUCKET != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    env:
-      VERSION: ${{ needs.build.outputs.version }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: hr-${{ needs.build.outputs.version }}
-
-      - uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ vars.PUBLISH_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Publish the package
-        run: aws s3 cp "hr-$VERSION.zip" "s3://${{ vars.ARTIFACTS_BUCKET }}/hr/$VERSION.zip" --no-progress
+      - name: Publish to GitHub Packages
+        if: github.event_name == 'push'
+        run: dotnet nuget push "out/*.nupkg" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Tag the commit
+        if: github.event_name == 'push'
         run: |
-          git tag "hr/$VERSION"
-          git push origin "hr/$VERSION"
+          package=$(basename out/*.nupkg .nupkg)
+          version=${package#Featurewise.Core.}
+          git tag "v$version"
+          git push origin "v$version"

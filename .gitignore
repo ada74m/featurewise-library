@@ -3,11 +3,3 @@ obj/
 *.user
 *.DotSettings.user
 .idea/
-
-# Terraform and published Lambda packages
-.terraform/
-*.tfstate
-*.tfstate.*
-samples/out/
-# Modules don't keep lock files; roots do.
-samples/Infrastructure/.terraform.lock.hcl

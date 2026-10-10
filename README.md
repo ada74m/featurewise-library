@@ -176,6 +176,16 @@ Each invocation logs its start, with its id, its cause and any idempotency key; 
 - **Every link names one feature.** Links derive from `Link<TFeature, TResult>` and from nothing else.
 - **Deny by default.** Every feature is registered with its rules, and only what they approve is invoked.
 
+## Installing
+
+The package is `Featurewise.Core`, published as previews to GitHub Packages. Add the feed, with a GitHub token that can read packages, then the package:
+
+```
+dotnet nuget add source https://nuget.pkg.github.com/ada74m/index.json --name featurewise \
+  --username <github user> --password <token with read:packages>
+dotnet add package Featurewise.Core --prerelease
+```
+
 ## Building and testing
 
 ```
