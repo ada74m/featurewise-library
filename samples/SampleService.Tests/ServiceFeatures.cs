@@ -9,7 +9,7 @@ public static class ServiceFeatures
 {
     public static Features Over(Fakes fakes, Action<Features> register)
     {
-        var features = new Features();
+        var features = new Features(Service.Id);
         register(features);
         var json = features.ConfigureJson(new JsonSerializerOptions());
         return features

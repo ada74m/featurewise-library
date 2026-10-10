@@ -21,7 +21,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     [Fact]
     public async Task EachInvocationRunsInItsOwnScopeWhichIsDisposedAfterwards()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Probe, AnyCaller<Probe.Args>>()
             .RegisterDependencies(services => services.AddScoped<ScopeProbe>());
@@ -37,7 +37,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     [Fact]
     public async Task AFeatureThatInvokesALinkThrows()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterFeature<Escalate, AnyCaller<Escalate.Args>>()
@@ -49,7 +49,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     [Fact]
     public async Task InvocationsInSequenceAreNotNested()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
 
         await features.Invoke(new Fire.Args("e1"), Callers.Manager);
@@ -62,7 +62,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     public async Task InvokingWithACancelledTokenDoesNotInvokeTheFeature()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -77,7 +77,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     public async Task CancellingDuringAnInvocationStopsTheFeatureAndIsNotLoggedAsAFailure()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -96,7 +96,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     public async Task AFeatureCancellingItselfIsLoggedAsAFailure()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<GiveUp, AnyCaller<GiveUp.Args>>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -111,7 +111,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     [Fact]
     public async Task ALinkCanBeInvokedWithoutKnowingItsFeatureOrResult()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         Link link = new Fire.Args("e1");
 
@@ -132,7 +132,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
             ActivityStopped = stopped.Add
         };
         ActivitySource.AddActivityListener(listener);
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -153,7 +153,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
     public async Task AFeatureWithNothingToReturnReturnsNil()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<HandleEmployeeLeft, AnyCaller<HandleEmployeeLeft.Args>>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -176,7 +176,7 @@ public class InvocationTests(ITestOutputHelper testOutputHelper)
             ActivityStopped = stopped.Add
         };
         ActivitySource.AddActivityListener(listener);
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<DescribeInvocation, AnyCaller<DescribeInvocation.Args>>();
         const string cause = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
         using var cancellation = new CancellationTokenSource();

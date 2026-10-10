@@ -9,7 +9,7 @@ namespace SampleService.ScheduledWorker;
 // function serves every schedule.
 public class Function
 {
-    private readonly Features _features = new();
+    private readonly Features _features = new(Service.Id);
     private readonly JsonSerializerOptions _json;
 
     public Function() : this(Registrations.Aws)

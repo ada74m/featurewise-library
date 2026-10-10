@@ -16,24 +16,24 @@ public class ScheduledWorkerTests
     [Fact]
     public async Task AScheduleRunsTheJobItsInputNames()
     {
-        await Handle($$$"""{"Schedule":"{{{ScheduleArn}}}","Execution":"x1","Link":{"$feature":"SendReviewReminders"}}""");
+        await Handle($$$"""{"Schedule":"{{{ScheduleArn}}}","Execution":"x1","Link":{"$feature":"hr/SendReviewReminders"}}""");
 
-        Assert.Contains("\"$feature\":\"RemindManagerOfReviews\",\"ManagerId\":\"m1\"", Assert.Single(_fakes.QueuedMessages));
+        Assert.Contains("\"$feature\":\"hr/RemindManagerOfReviews\",\"ManagerId\":\"m1\"", Assert.Single(_fakes.QueuedMessages));
     }
 
     [Fact]
     public async Task AJobsArgumentsComeFromTheInput()
     {
-        await Handle($$$"""{"Schedule":"{{{ScheduleArn}}}","Link":{"$feature":"ArchiveLeavers","AfterDays":5}}""");
+        await Handle($$$"""{"Schedule":"{{{ScheduleArn}}}","Link":{"$feature":"hr/ArchiveLeavers","AfterDays":5}}""");
 
         Assert.Null(_fakes.Employees["e3"]);
         Assert.Null(_fakes.Employees["e4"]);
     }
 
     [Theory]
-    [InlineData("""{"Schedule":"s","Link":{"$feature":"Fire","EmployeeId":"e1"}}""")]
+    [InlineData("""{"Schedule":"s","Link":{"$feature":"hr/Fire","EmployeeId":"e1"}}""")]
     [InlineData("""{"Schedule":"s"}""")]
-    [InlineData("""{"Link":{"$feature":"SendReviewReminders"}}""")]
+    [InlineData("""{"Link":{"$feature":"hr/SendReviewReminders"}}""")]
     public async Task AnInputThatDoesntNameOneOfTheWorkersJobsFails(string input)
     {
         await Assert.ThrowsAsync<JsonException>(() => Handle(input));

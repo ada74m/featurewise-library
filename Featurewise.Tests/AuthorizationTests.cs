@@ -9,7 +9,7 @@ public class AuthorizationTests
     public async Task ACallerNoRuleApprovesIsDeniedAndTheFeatureIsNotInvoked()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -27,7 +27,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AnAnonymousCallerIsDeniedAsUnauthenticated()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>();
 
@@ -40,7 +40,7 @@ public class AuthorizationTests
     [Fact]
     public async Task RulesCanDependOnTheLinksArguments()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>();
 
@@ -51,7 +51,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AFeatureWithSeveralRulesAdmitsAnyoneOneOfThemApproves()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization, AnySystemCaller<Fire.Args>>();
 
         var byManager = await features.Invoke(new Fire.Args("e1"), Callers.Manager);
@@ -66,7 +66,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AnyCallerAdmitsAnonymousCallers()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>();
 
         Assert.Null(await features.Invoke(new WhoAmI.Args(), Callers.Anonymous));
@@ -75,7 +75,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AFeatureCanTakeItsCallerAsADependency()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>();
 
         Assert.Equal("manager", await features.Invoke(new WhoAmI.Args(), Callers.Manager));
@@ -84,7 +84,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AFeatureOffersALinkOnlyIfItsCallerMayInvokeIt()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
             .RegisterFeature<Fire, FireAuthorization>();
@@ -99,7 +99,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AnOfferedLinkIsCheckedAgainWhenInvoked()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
             .RegisterFeature<Fire, FireAuthorization>();
@@ -112,7 +112,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AnySignedInCallerAdmitsSignedInCallersOnly()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, AnySignedInCaller<Fire.Args>>();
 
@@ -127,7 +127,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AnySignedInCallerAppliesOnlyToItsOwnLinkType()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<EmployeeReview, AnySignedInCaller<EmployeeReview.Args>>()
             .RegisterFeature<Fire, FireAuthorization>();
@@ -151,7 +151,7 @@ public class AuthorizationTests
     [Fact]
     public async Task ASystemCallerCanInvokeFeaturesOpenToSignedInCallers()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, AnySignedInCaller<Fire.Args>>();
 
@@ -163,7 +163,7 @@ public class AuthorizationTests
     [Fact]
     public async Task ASystemCallerGetsNoSpecialTreatment()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>();
 
@@ -174,7 +174,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AnySystemCallerAdmitsSystemCallersOnly()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, AnySystemCaller<Fire.Args>>();
 
@@ -192,7 +192,7 @@ public class AuthorizationTests
     [Fact]
     public async Task AnySystemCallerAppliesOnlyToItsOwnLinkType()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Remind, AnySystemCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>())
@@ -206,7 +206,7 @@ public class AuthorizationTests
     public async Task ARuleThatThrowsFailsTheInvocationAndIsLoggedAsAFailure()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, BrokenFireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -223,7 +223,7 @@ public class AuthorizationTests
     public async Task ARuleCanBeCancelledWithTheInvocation()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, SlowFireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -240,7 +240,7 @@ public class AuthorizationTests
     public async Task ARefusalIsLoggedAsARefusalNotAFailure()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));

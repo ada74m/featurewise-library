@@ -27,7 +27,7 @@ public class Function
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private readonly Features _features = new();
+    private readonly Features _features = new(Service.Id);
     private readonly Dictionary<string, Route> _routes;
 
     public Function() : this(Registrations.Aws)

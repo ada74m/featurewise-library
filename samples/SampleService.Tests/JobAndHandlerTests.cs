@@ -16,7 +16,7 @@ public class JobAndHandlerTests
         var result = await features.Invoke(new SendReviewReminders.Args(), Callers.Job);
 
         Assert.Equal(new SendReviewReminders.Result(1), result);
-        Assert.Contains("\"$feature\":\"RemindManagerOfReviews\",\"ManagerId\":\"m1\"", Assert.Single(_fakes.QueuedMessages));
+        Assert.Contains("\"$feature\":\"hr/RemindManagerOfReviews\",\"ManagerId\":\"m1\"", Assert.Single(_fakes.QueuedMessages));
     }
 
     [Fact]

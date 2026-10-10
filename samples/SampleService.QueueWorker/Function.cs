@@ -13,7 +13,7 @@ namespace SampleService.QueueWorker;
 // services' SNS topics, which a topic adapter turns into links.
 public class Function
 {
-    private readonly Features _features = new();
+    private readonly Features _features = new(Service.Id);
     private readonly JsonSerializerOptions _json;
     private readonly Dictionary<string, ITopicAdapter> _adaptersByTopic;
 

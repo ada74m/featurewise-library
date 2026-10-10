@@ -23,7 +23,7 @@ namespace Featurewise;
 /// <see cref="Features"/>. Features use the host's services directly. The host disposes it.
 /// </description></item>
 /// <item><description>
-/// Standalone, as in a console tool or a test: create one with <see cref="Features()"/>, register
+/// Standalone, as in a console tool or a test: create one with <see cref="Features(string)"/>, register
 /// features with <see cref="RegisterFeature{TFeature, TRule}"/> and everything they depend on with
 /// <see cref="RegisterDependencies"/> and <see cref="UseLoggerFactory"/>, then call
 /// <see cref="Invoke{TResult}(Link{TResult}, ClaimsPrincipal, CancellationToken)"/>.
@@ -52,7 +52,7 @@ namespace Featurewise;
 /// </remarks>
 /// <example>
 /// <code>
-/// await using var features = new Features();
+/// await using var features = new Features("hr");
 /// features
 ///     .RegisterFeature&lt;Fire, Fire.Rule&gt;()
 ///     .RegisterDependencies(services =&gt; services.AddScoped&lt;IEmployeeStore, SqlEmployeeStore&gt;())
@@ -83,8 +83,8 @@ public class Features : IDisposable, IAsyncDisposable
     private static readonly ConcurrentDictionary<Type, Type> FeatureTypesByLinkType = new();
 
     /// <summary>
-    /// The JSON property that names a link's feature, in JSON written with options set up by
-    /// <see cref="ConfigureJson"/>.
+    /// The JSON property that names a link's feature, qualified by its service, such as <c>hr/Fire</c>, in
+    /// JSON written with options set up by <see cref="ConfigureJson"/>.
     /// </summary>
     public const string FeatureNameProperty = "$feature";
 
@@ -119,17 +119,21 @@ public class Features : IDisposable, IAsyncDisposable
     /// <summary>
     /// Creates a standalone <see cref="Features"/>, with a container of its own and no features registered.
     /// </summary>
+    /// <param name="service">
+    /// The id of the service the features belong to, which every link it writes carries; see <see cref="Service"/>.
+    /// </param>
     /// <remarks>
     /// Logging and authorization are registered, so that any feature can take an
     /// <see cref="ILogger{TCategoryName}"/>, <see cref="Invocation"/> and <see cref="LinkPermissions"/>.
     /// Log output goes nowhere until the entrypoint adds logging providers through
     /// <see cref="RegisterDependencies"/> or borrows a logger factory with <see cref="UseLoggerFactory"/>.
     /// </remarks>
-    public Features()
+    /// <exception cref="ArgumentException"><paramref name="service"/> is empty, white space, or contains <c>/</c>.</exception>
+    public Features(string service)
     {
         _activityListener = ListenToInvocations();
         var services = new ServiceCollection();
-        _builder = new FeaturesBuilder(services);
+        _builder = new FeaturesBuilder(services, service);
         _registry = _builder.Registry;
         _ownProvider = new Lazy<ServiceProvider>(() => services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }));
@@ -144,6 +148,17 @@ public class Features : IDisposable, IAsyncDisposable
     }
 
     private IServiceProvider Provider => _hostProvider ?? _ownProvider!.Value;
+
+    /// <summary>
+    /// The id of the service the features belong to, such as <c>hr</c>.
+    /// </summary>
+    /// <remarks>
+    /// Several services' links can reach one client, such as a UI that combines them, so every link a
+    /// service writes qualifies its feature's name with the service, as in <c>"$feature":"hr/Fire"</c>, and
+    /// the client sends it back to that service. The id is part of every link handed out, so, like a
+    /// feature's name, it must not change, and it can't contain <c>/</c>.
+    /// </remarks>
+    public string Service => _registry.Service;
 
     /// <summary>
     /// Registers a feature in a standalone <see cref="Features"/>, and the rule that says who may invoke it.
@@ -318,9 +333,11 @@ public class Features : IDisposable, IAsyncDisposable
     /// <returns><paramref name="options"/>, so that the call can be chained.</returns>
     /// <remarks>
     /// <para>
-    /// A link's JSON names its feature in a <see cref="FeatureNameProperty"/> property, using the name
-    /// given at <see cref="RegisterFeature{TFeature, TRule}"/>. Reading a link through a base type requires
-    /// that property, and accepts it anywhere in the object.
+    /// A link's JSON names its feature in a <see cref="FeatureNameProperty"/> property: the name given at
+    /// <see cref="RegisterFeature{TFeature, TRule}"/>, qualified by <see cref="Service"/>, as in
+    /// <c>hr/Fire</c>. Reading a link through a base type requires that property, and accepts it anywhere
+    /// in the object. A link that names no service, or another one, throws <see cref="JsonException"/>, so
+    /// a link sent to the wrong service is refused rather than invoked as one of this service's features.
     /// </para>
     /// <para>
     /// Links come back from clients, so reading a link checks its arguments as their types declare: a

@@ -8,7 +8,7 @@ public class JsonTests
     [Fact]
     public void ALinkRoundTripsThroughItsBaseTypeWithItsFeatureNameAndCause()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
         Link<Fire.Result> link = new Fire.Args("e1") { CausedBy = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01" };
@@ -16,46 +16,75 @@ public class JsonTests
         var json = JsonSerializer.Serialize(link, options);
         var readBack = JsonSerializer.Deserialize<Link<Fire.Result>>(json, options);
 
-        Assert.Contains("\"$feature\":\"Fire\"", json);
+        Assert.Contains("\"$feature\":\"hr/Fire\"", json);
         var fireLink = Assert.IsType<Fire.Args>(readBack);
         Assert.Equal("e1", fireLink.EmployeeId);
         Assert.Equal(link.CausedBy, fireLink.CausedBy);
     }
 
     [Fact]
+    public void ALinkQualifiesItsFeatureWithItsServiceWhereverItIsSerialized()
+    {
+        using var features = new Features("hr");
+        features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>().RegisterFeature<Fire, FireAuthorization>();
+        var options = features.ConfigureJson(new JsonSerializerOptions());
+
+        var link = JsonSerializer.Serialize<Link>(new Fire.Args("e1") { CausedBy = null }, options);
+        var inAResult = JsonSerializer.Serialize(new EmployeeReview.Result("comments", new Fire.Args("e1") { CausedBy = null }), options);
+
+        Assert.Equal("""{"$feature":"hr/Fire","EmployeeId":"e1","CausedBy":null}""", link);
+        Assert.Contains(""""LinkToFire":{"$feature":"hr/Fire","EmployeeId":"e1"""", inAResult);
+        Assert.Equal("hr", features.Service);
+    }
+
+    [Theory]
+    [InlineData("""{"$feature":"payroll/Fire","EmployeeId":"e1"}""")]
+    [InlineData("""{"$feature":"Fire","EmployeeId":"e1"}""")]
+    [InlineData("""{"$feature":"/Fire","EmployeeId":"e1"}""")]
+    public void ALinkForAnotherServiceOrNoneIsRejected(string json)
+    {
+        using var features = new Features("hr");
+        features.RegisterFeature<Fire, FireAuthorization>();
+        var options = features.ConfigureJson(new JsonSerializerOptions());
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Link>(json, options));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Fire.Args>(json, options));
+    }
+
+    [Fact]
     public void ALinkCarriesItsFeatureNameWhereverItIsSerialized()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>().RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize(new EmployeeReview.Result("comments", new Fire.Args("e1")), options);
         var readBack = JsonSerializer.Deserialize<EmployeeReview.Result>(json, options)!;
 
-        Assert.Contains("\"LinkToFire\":{\"$feature\":\"Fire\"", json);
+        Assert.Contains("\"LinkToFire\":{\"$feature\":\"hr/Fire\"", json);
         Assert.Equal(new Fire.Args("e1"), readBack.LinkToFire);
     }
 
     [Fact]
     public void AFeatureNameAttributeNamesTheFeatureInJson()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize<Link<EmployeeReview.Result>>(new EmployeeReview.Args("e1"), options);
 
-        Assert.Contains("\"$feature\":\"review-employee\"", json);
+        Assert.Contains("\"$feature\":\"hr/review-employee\"", json);
     }
 
     [Fact]
     public void ALinkCanBeReadWithItsFeatureNameAnywhere()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
-        var readBack = JsonSerializer.Deserialize<Link<Fire.Result>>("""{"EmployeeId":"e1","$feature":"Fire"}""", options);
+        var readBack = JsonSerializer.Deserialize<Link<Fire.Result>>("""{"EmployeeId":"e1","$feature":"hr/Fire"}""", options);
 
         Assert.Equal(new Fire.Args("e1"), readBack);
     }
@@ -63,7 +92,7 @@ public class JsonTests
     [Fact]
     public void SerializingALinkToAnUnregisteredFeatureThrows()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         Assert.Throws<NotSupportedException>(() => JsonSerializer.Serialize<Link<Fire.Result>>(new Fire.Args("e1"), options));
@@ -73,26 +102,26 @@ public class JsonTests
     [Fact]
     public void ALinkToAFeatureRegisteredOnlyForItsLinksRoundTrips()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterLinksTo<EmployeeReview>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
         var json = JsonSerializer.Serialize<Link>(new EmployeeReview.Args("e1"), options);
         var readBack = JsonSerializer.Deserialize<Link>(json, options);
 
-        Assert.Contains("\"$feature\":\"review-employee\"", json);
+        Assert.Contains("\"$feature\":\"hr/review-employee\"", json);
         Assert.Equal(new EmployeeReview.Args("e1"), readBack);
     }
 
     [Fact]
     public void ALinkReadFromJsonWithoutACauseHasNone()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
         using var request = new Activity("request reading the link").Start();
 
-        var readThroughFeatures = JsonSerializer.Deserialize<Link<Fire.Result>>("""{"$feature":"Fire","EmployeeId":"e1"}""", options)!;
+        var readThroughFeatures = JsonSerializer.Deserialize<Link<Fire.Result>>("""{"$feature":"hr/Fire","EmployeeId":"e1"}""", options)!;
         var readPlainly = JsonSerializer.Deserialize<Fire.Args>("""{"EmployeeId":"e1"}""")!;
 
         Assert.Null(readThroughFeatures.CausedBy);
@@ -103,7 +132,7 @@ public class JsonTests
     [Fact]
     public async Task ALinkReadFromJsonAsAnyLinkCanBeInvoked()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>().RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
         var json = JsonSerializer.Serialize(new Fire.Args("e1"), options);
@@ -118,7 +147,7 @@ public class JsonTests
     [Fact]
     public void NilRoundTripsAsAnEmptyObject()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<HandleEmployeeLeft, AnyCaller<HandleEmployeeLeft.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
@@ -131,7 +160,7 @@ public class JsonTests
     [Fact]
     public void AResultRoundTripsThroughItsBaseTypeWithItsCaseName()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
@@ -145,7 +174,7 @@ public class JsonTests
     [Fact]
     public void AResultCarriesItsCaseNameWhereverItIsSerialized()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
@@ -158,7 +187,7 @@ public class JsonTests
     [Fact]
     public void AResultWithoutCasesIsSerializedAsItIs()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
@@ -170,7 +199,7 @@ public class JsonTests
     [Fact]
     public void ASealedCaseNamesItselfOnlyThroughItsResultType()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<TossCoin, AnyCaller<TossCoin.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
@@ -180,14 +209,14 @@ public class JsonTests
     }
 
     [Theory]
-    [InlineData("""{"$feature":"Fire"}""")]
-    [InlineData("""{"$feature":"Fire","EmployeeId":null}""")]
-    [InlineData("""{"$feature":"EmployeeSearch","Limit":10}""")]
-    [InlineData("""{"$feature":"EmployeeSearch","Query":"a"}""")]
-    [InlineData("""{"$feature":"EmployeeSearch","Query":"a","Limit":null}""")]
+    [InlineData("""{"$feature":"hr/Fire"}""")]
+    [InlineData("""{"$feature":"hr/Fire","EmployeeId":null}""")]
+    [InlineData("""{"$feature":"hr/EmployeeSearch","Limit":10}""")]
+    [InlineData("""{"$feature":"hr/EmployeeSearch","Query":"a"}""")]
+    [InlineData("""{"$feature":"hr/EmployeeSearch","Query":"a","Limit":null}""")]
     public void ALinkMissingANonNullableArgumentIsRejected(string json)
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>().RegisterFeature<EmployeeSearch, AnyCaller<EmployeeSearch.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
@@ -197,11 +226,11 @@ public class JsonTests
     [Fact]
     public async Task ALinksNullableAndDefaultedArgumentsMayBeLeftOut()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<EmployeeSearch, AnyCaller<EmployeeSearch.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 
-        var link = JsonSerializer.Deserialize<Link>("""{"$feature":"EmployeeSearch","Query":"a","Limit":10}""", options)!;
+        var link = JsonSerializer.Deserialize<Link>("""{"$feature":"hr/EmployeeSearch","Query":"a","Limit":10}""", options)!;
 
         Assert.Equal("a 10 - - 1", await features.Invoke(link, Callers.Anonymous));
     }
@@ -209,7 +238,7 @@ public class JsonTests
     [Fact]
     public void TypesOtherThanLinksAreReadAsBefore()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
         var options = features.ConfigureJson(new JsonSerializerOptions());
 

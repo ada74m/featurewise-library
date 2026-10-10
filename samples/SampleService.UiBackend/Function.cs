@@ -19,7 +19,7 @@ namespace SampleService.UiBackend;
 // which suits a UI shipped with the service and no one else.
 public class Function
 {
-    private readonly Features _features = new();
+    private readonly Features _features = new(Service.Id);
     private readonly HashSet<string> _offered = [];
     private readonly JsonSerializerOptions _json;
 
@@ -87,14 +87,17 @@ public class Function
     private void Offer<TFeature>() =>
         _offered.Add(typeof(TFeature).GetCustomAttribute<FeatureNameAttribute>()?.Name ?? typeof(TFeature).Name);
 
-    // The path names the feature. Arguments may name it too, but only as the same feature.
+    // The URL names the service and the path the feature, so the UI can post bare arguments as well as a
+    // link it was given, whose $feature qualifies the feature with the service, as in hr/Fire. A link's
+    // $feature must name the same feature of this service.
     private Link ReadLink(string feature, JsonObject arguments)
     {
+        var qualified = $"{Service.Id}/{feature}";
         if (arguments.TryGetPropertyValue(Features.FeatureNameProperty, out var named)
-            && !(named is JsonValue value && value.TryGetValue<string>(out var name) && name == feature))
-            throw new JsonException($"the arguments name a feature other than {feature}");
+            && !(named is JsonValue value && value.TryGetValue<string>(out var name) && name == qualified))
+            throw new JsonException($"the arguments name a feature other than {qualified}");
 
-        arguments[Features.FeatureNameProperty] = feature;
+        arguments[Features.FeatureNameProperty] = qualified;
         return arguments.Deserialize<Link>(_json) ?? throw new JsonException("the arguments are null");
     }
 

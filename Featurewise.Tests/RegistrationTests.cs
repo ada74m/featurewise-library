@@ -8,7 +8,7 @@ public class RegistrationTests
     [Fact]
     public async Task InvokingAnUnregisteredLinkThrows()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
         {
@@ -20,7 +20,7 @@ public class RegistrationTests
     [Fact]
     public async Task InvokingALinkRegisteredWithoutItsFeatureThrows()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterLinksTo<Fire>();
 
         await Assert.ThrowsAsync<ArgumentException>(() => features.Invoke(new Fire.Args("e1"), Callers.Manager));
@@ -29,7 +29,7 @@ public class RegistrationTests
     [Fact]
     public async Task AFeatureCanBeRegisteredBeforeOrAfterItsLinks()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterLinksTo<Fire>()
             .RegisterFeature<Fire, FireAuthorization>()
@@ -41,21 +41,21 @@ public class RegistrationTests
     [Fact]
     public void RegisteringLinksToAFeatureThatNamesAnotherFeatureAsItselfThrows()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         Assert.Throws<ArgumentException>(() => features.RegisterLinksTo<Promote>());
     }
 
     [Fact]
     public void RegisteringAFeatureThatNamesAnotherFeatureAsItselfThrows()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         Assert.Throws<ArgumentException>(() => features.RegisterFeature<Promote, AnyCaller<Fire.Args>>());
     }
 
     [Fact]
     public void RegisteringAFeatureTwiceThrows()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         Assert.Throws<InvalidOperationException>(() => features.RegisterFeature<Fire, FireAuthorization>());
     }
@@ -63,7 +63,7 @@ public class RegistrationTests
     [Fact]
     public async Task RegisteringAfterInvokingThrows()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
         await features.Invoke(new Fire.Args("e1"), Callers.Manager);
 
@@ -75,7 +75,7 @@ public class RegistrationTests
     [Fact]
     public async Task InvokingAFeatureWithAnUnregisteredDependencyThrows()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<Probe, AnyCaller<Probe.Args>>();
 
         await Assert.ThrowsAsync<AggregateException>(() => features.Invoke(new Probe.Args(), Callers.Manager));
@@ -84,7 +84,7 @@ public class RegistrationTests
     [Fact]
     public async Task AFeatureThatDependsOnAnotherFeatureFailsTheFirstInvocation()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterFeature<Dismiss, AnyCaller<Dismiss.Args>>();
@@ -97,7 +97,7 @@ public class RegistrationTests
     [Fact]
     public void RegisteringAFeatureWithARuleForAnotherFeaturesLinksThrows()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
 
         var thrown = Assert.Throws<ArgumentException>(() => features.RegisterFeature<Fire, AnySystemCaller<Remind.Args>>());
         Assert.Equal("AnySystemCaller<Remind.Args> isn't a rule for Fire: a rule must derive from AuthorizationHandler<InvokeRequirement, Fire.Args>", thrown.Message);
@@ -106,7 +106,7 @@ public class RegistrationTests
     [Fact]
     public void RegisteringAFeatureThatAllowsAnonymousCallersThrows()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
 
         var thrown = Assert.Throws<ArgumentException>(() => features.RegisterFeature<OpenDoor, AnySignedInCaller<OpenDoor.Args>>());
         Assert.Contains("AnyCaller<OpenDoor.Args>", thrown.Message);
@@ -116,7 +116,7 @@ public class RegistrationTests
     public void ARuleNamedBySeveralFeaturesIsRegisteredOnce()
     {
         var services = new ServiceCollection();
-        services.AddFeatures(features => features
+        services.AddFeatures("hr", features => features
             .RegisterFeature<WhoAmI, AnyCaller<Link>>()
             .RegisterFeature<TossCoin, AnyCaller<Link>>());
 
@@ -124,9 +124,16 @@ public class RegistrationTests
     }
 
     [Fact]
+    public void AServiceIdMustNameSomethingAndCantContainASlash()
+    {
+        Assert.Throws<ArgumentException>(() => new Features(" "));
+        Assert.Throws<ArgumentException>(() => new Features("hr/payroll"));
+    }
+
+    [Fact]
     public void RegisteringTwoFeaturesWithTheSameNameThrows()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Fire, FireAuthorization>();
 
         Assert.Throws<InvalidOperationException>(() => features.RegisterFeature<Impostor, AnyCaller<Impostor.Args>>());
@@ -135,7 +142,7 @@ public class RegistrationTests
     [Fact]
     public void BuildingChecksRegistrationsImmediately()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<Probe, AnyCaller<Probe.Args>>();
 
         Assert.Throws<AggregateException>(() => features.Build());
@@ -144,7 +151,7 @@ public class RegistrationTests
     [Fact]
     public void BuildingClosesRegistration()
     {
-        using var features = new Features();
+        using var features = new Features("hr");
         features.RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>().Build();
 
         Assert.Throws<InvalidOperationException>(() => features.RegisterFeature<TossCoin, AnyCaller<TossCoin.Args>>());
@@ -154,7 +161,7 @@ public class RegistrationTests
     [Fact]
     public async Task ABuiltFeaturesCanBeBuiltAgainAndInvoked()
     {
-        await using var features = new Features().RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>().Build().Build();
+        await using var features = new Features("hr").RegisterFeature<WhoAmI, AnyCaller<WhoAmI.Args>>().Build().Build();
 
         Assert.Equal("manager", await features.Invoke(new WhoAmI.Args(), Callers.Manager));
     }

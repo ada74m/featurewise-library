@@ -15,7 +15,7 @@ public class EventPublisherTests
         var message = JsonNode.Parse(request.Message)!;
         Assert.Equal(Topic, request.TopicArn);
         Assert.Equal("1.0", (string?)message["specversion"]);
-        Assert.Equal("SampleService", (string?)message["source"]);
+        Assert.Equal("hr", (string?)message["source"]);
         Assert.Equal("EmployeeLeft", (string?)message["type"]);
         Assert.Equal("application/json", (string?)message["datacontenttype"]);
         Assert.Equal(InvocationId, (string?)message["traceparent"]);

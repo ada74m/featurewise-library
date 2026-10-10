@@ -21,18 +21,24 @@ namespace Featurewise;
 /// </remarks>
 public sealed class FeaturesBuilder
 {
-    internal FeaturesBuilder(IServiceCollection services)
+    internal FeaturesBuilder(IServiceCollection services, string service)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(service);
+        if (service.Contains('/'))
+            throw new ArgumentException($"a service id can't contain /, which separates it from feature names in links: {service}", nameof(service));
         Services = services;
 
         var existing = services.FirstOrDefault(d => d.ServiceType == typeof(FeatureRegistry) && !d.IsKeyedService);
         if (existing is not null)
         {
             Registry = (FeatureRegistry)existing.ImplementationInstance!;
+            if (Registry.Service != service)
+                throw new InvalidOperationException(
+                    $"the service collection already has features for the service {Registry.Service}, not {service}");
             return;
         }
 
-        Registry = new FeatureRegistry();
+        Registry = new FeatureRegistry(service);
         services.AddSingleton(Registry);
 
         // Loggers that write nowhere until the host or entrypoint adds providers, so features can

@@ -12,7 +12,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
     {
         var logs = new CapturingLoggerProvider();
         
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features.RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
         features.RegisterFeature<Fire, FireAuthorization>();
         features.RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -32,7 +32,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
     public async Task FeatureLogsCarryTheInvokedFeature()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -47,7 +47,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
     public async Task InvokingLogsStartAndFinishUnderTheFeaturesCategory()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Fire, FireAuthorization>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -67,7 +67,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
     public async Task InvokingAFailingFeatureLogsTheFailureAndRethrows()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Explode, AnyCaller<Explode.Args>>()
             .RegisterDependencies(s => s.AddLogging(b => b.AddProvider(logs)));
@@ -86,7 +86,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         var logs = new CapturingLoggerProvider();
         using var hostLoggerFactory = LoggerFactory.Create(b => b.AddProvider(logs));
 
-        await using (var features = new Features())
+        await using (var features = new Features("hr"))
         {
             features
                 .RegisterFeature<Fire, FireAuthorization>()
@@ -130,7 +130,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
         };
         ActivitySource.AddActivityListener(listener);
 
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
             .RegisterFeature<Fire, FireAuthorization>();
@@ -159,7 +159,7 @@ public class LoggingAndTracingTests(ITestOutputHelper testOutputHelper)
     public async Task InvocationLogsCarryTheInvocationIdAndWhatCausedIt()
     {
         var logs = new CapturingLoggerProvider();
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
             .RegisterFeature<Fire, FireAuthorization>()

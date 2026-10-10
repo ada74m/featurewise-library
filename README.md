@@ -52,7 +52,7 @@ var result = await features.Invoke(new Fire.Args("e1"), caller, cancellationToke
 ```csharp
 public class Function
 {
-    private readonly Features _features = new Features()
+    private readonly Features _features = new Features("hr")
         .RegisterFeature<Fire, Fire.Rule>()
         .RegisterDependencies(services => services.AddScoped<IEmployeeStore, DynamoEmployeeStore>())
         .Build();
@@ -70,7 +70,7 @@ public class Function
 **Hosted**, for ASP.NET or a worker service. Features register in the host's container and use its configuration, logging and services:
 
 ```csharp
-builder.Services.AddFeatures(features => features
+builder.Services.AddFeatures("hr", features => features
     .RegisterFeature<Fire, Fire.Rule>());
 builder.Services.AddOptions<JsonOptions>()
     .Configure<Features>((json, features) => features.ConfigureJson(json.SerializerOptions));
@@ -120,10 +120,12 @@ A refused invocation throws `InvocationDeniedException`, which says whether the 
 Links leave the process and come back. `ConfigureJson` sets up JSON options so they survive the trip:
 
 ```json
-{"$feature":"Fire","EmployeeId":"e1","CausedBy":"00-4bf9…-00f0…-01"}
+{"$feature":"hr/Fire","EmployeeId":"e1","CausedBy":"00-4bf9…-00f0…-01"}
 ```
 
 The `$feature` property names the feature, so a general endpoint can read any link as `Link` and invoke it without knowing what it is. A feature's name is its class name, or the name in its `[FeatureName]` attribute, which lets the class be renamed without breaking links already handed out. Results with cases carry a `$case` property the same way.
+
+The feature's name is qualified by its service, given when `Features` is created: `new Features("hr")`, or `AddFeatures("hr", …)` in a host. One client, such as a UI that combines several services, can hold links from all of them and send each back to the service named before the slash. A service reads only its own links: one that names no service or another throws a `JsonException`, so a link sent to the wrong service is refused instead of invoked as one of its features. Like a feature's name, a service's id is in every link handed out, so it must not change.
 
 The options know the features registered with `Features`. An entrypoint that registers only some features can still send links to the rest: `RegisterLinksTo<HandleEmployeeLeft>()` lets its links be written and read here, while invoking one still fails, because the feature runs elsewhere.
 

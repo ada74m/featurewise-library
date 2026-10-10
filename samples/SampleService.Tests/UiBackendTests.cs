@@ -22,7 +22,7 @@ public class UiBackendTests
         Assert.Equal("Found", (string?)body["$case"]);
         Assert.Equal("Ed", (string?)body["Employee"]!["Name"]);
         Assert.Equal("Active", (string?)body["Employee"]!["Status"]);
-        Assert.Equal("Fire", (string?)body["LinkToFire"]!["$feature"]);
+        Assert.Equal("hr/Fire", (string?)body["LinkToFire"]!["$feature"]);
     }
 
     [Fact]
@@ -42,7 +42,9 @@ public class UiBackendTests
         var details = await Handle(Lambda.Post("EmployeeDetails", Lambda.Manager, """{"EmployeeId":"e1"}"""));
         var link = JsonNode.Parse(details.Body)!["LinkToFire"]!;
 
-        var fired = await Handle(Lambda.Post((string)link["$feature"]!, Lambda.Manager, link.ToJsonString()));
+        // As the UI shell does: the part before the slash says which service's backend to post it to.
+        var feature = ((string)link["$feature"]!).Split('/')[1];
+        var fired = await Handle(Lambda.Post(feature, Lambda.Manager, link.ToJsonString()));
 
         Assert.Equal("""{"$case":"Fired"}""", fired.Body);
         Assert.Equal(EmploymentStatus.Left, _fakes.Employees["e1"]!.Status);
@@ -84,7 +86,8 @@ public class UiBackendTests
     [InlineData("[]")]
     [InlineData("{}")]
     [InlineData("""{"EmployeeId":null}""")]
-    [InlineData("""{"$feature":"Hire","EmployeeId":"e1"}""")]
+    [InlineData("""{"$feature":"hr/Hire","EmployeeId":"e1"}""")]
+    [InlineData("""{"$feature":"payroll/Fire","EmployeeId":"e1"}""")]
     public async Task ArgumentsThatDontMakeALinkAreABadRequest(string body)
     {
         var response = await Handle(Lambda.Post("Fire", Lambda.Manager, body));

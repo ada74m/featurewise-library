@@ -16,7 +16,7 @@ public class QueueWorkerTests
     public async Task ALinkTheServiceQueuedIsInvoked()
     {
         var response = await _worker.Handle(
-            Lambda.Messages(("m-1", """{"$feature":"RemindManagerOfReviews","ManagerId":"m1"}""")), Lambda.Context());
+            Lambda.Messages(("m-1", """{"$feature":"hr/RemindManagerOfReviews","ManagerId":"m1"}""")), Lambda.Context());
 
         Assert.Empty(response.BatchItemFailures);
         Assert.Equal([("m1", "Reviews due: Ed on 2026-10-13")], _fakes.Messenger.Sent);
@@ -49,15 +49,16 @@ public class QueueWorkerTests
     public async Task OnlyTheMessagesThatFailAreReported()
     {
         var response = await _worker.Handle(Lambda.Messages(
-            ("good", """{"$feature":"RemindManagerOfReviews","ManagerId":"m1"}"""),
+            ("good", """{"$feature":"hr/RemindManagerOfReviews","ManagerId":"m1"}"""),
             ("unreadable", "not json"),
             ("unknown-topic", Lambda.SnsEnvelope("arn:aws:sns:eu-west-2:123456789012:other", "sns-2", "{}")),
-            ("not-here", """{"$feature":"Fire","EmployeeId":"e1"}"""),
+            ("not-here", """{"$feature":"hr/Fire","EmployeeId":"e1"}"""),
+            ("no-service", """{"$feature":"RemindManagerOfReviews","ManagerId":"m1"}"""),
             ("bad-event", Lambda.SnsEnvelope(DirectoryTopic, "sns-3", """{"type":"AccountDeactivated"}"""))),
             Lambda.Context());
 
         Assert.Equal(
-            ["unreadable", "unknown-topic", "not-here", "bad-event"],
+            ["unreadable", "unknown-topic", "not-here", "no-service", "bad-event"],
             response.BatchItemFailures.Select(f => f.ItemIdentifier));
         Assert.Single(_fakes.Messenger.Sent);
     }
@@ -66,7 +67,7 @@ public class QueueWorkerTests
     public async Task RemindersTheScheduledWorkerQueuesAreSentByTheQueueWorker()
     {
         var scheduler = new ScheduledWorker.Function(_fakes.Register);
-        var input = """{"Schedule":"arn:aws:scheduler:eu-west-2:123456789012:schedule/default/review-reminders","Link":{"$feature":"SendReviewReminders"}}""";
+        var input = """{"Schedule":"arn:aws:scheduler:eu-west-2:123456789012:schedule/default/review-reminders","Link":{"$feature":"hr/SendReviewReminders"}}""";
         await scheduler.Handle(new MemoryStream(Encoding.UTF8.GetBytes(input)), Lambda.Context());
 
         var response = await _worker.Handle(Lambda.Messages(("m-1", Assert.Single(_fakes.QueuedMessages))), Lambda.Context());

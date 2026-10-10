@@ -9,7 +9,7 @@ public class IdempotencyTests
     [Fact]
     public async Task AFeatureCanReadTheIdempotencyKey()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>());
@@ -24,7 +24,7 @@ public class IdempotencyTests
     [Fact]
     public async Task AFeatureCanRecogniseARedeliveryByItsIdempotencyKey()
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>());
@@ -51,7 +51,7 @@ public class IdempotencyTests
             ActivityStopped = stopped.Add
         };
         ActivitySource.AddActivityListener(listener);
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>().AddLogging(b => b.AddProvider(logs)));
@@ -69,7 +69,7 @@ public class IdempotencyTests
     [InlineData("  ")]
     public async Task ABlankIdempotencyKeyIsRejected(string key)
     {
-        await using var features = new Features();
+        await using var features = new Features("hr");
         features
             .RegisterFeature<Remind, AnyCaller<Remind.Args>>()
             .RegisterDependencies(s => s.AddSingleton<SentReminders>());

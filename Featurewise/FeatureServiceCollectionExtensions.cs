@@ -12,6 +12,10 @@ public static class FeatureServiceCollectionExtensions
     /// Registers features in <paramref name="services"/>, and <see cref="Features"/> to invoke links to them.
     /// </summary>
     /// <param name="services">The host's service collection.</param>
+    /// <param name="service">
+    /// The id of the service the features belong to, which every link it writes carries; see
+    /// <see cref="Features.Service"/>.
+    /// </param>
     /// <param name="register">Registers features and the rules that say who may invoke them.</param>
     /// <returns><paramref name="services"/>, so that calls can be chained.</returns>
     /// <remarks>
@@ -26,23 +30,27 @@ public static class FeatureServiceCollectionExtensions
     /// services such as a database context with its entrypoint.
     /// </para>
     /// <para>
-    /// Call this as many times as needed; registrations accumulate. Whether missing dependencies are
+    /// Call this as many times as needed, with the same service id; registrations accumulate. Whether missing dependencies are
     /// found when the host starts depends on whether the host's container validates its registrations,
     /// which ASP.NET does by default only in development.
     /// </para>
     /// </remarks>
+    /// <exception cref="ArgumentException"><paramref name="service"/> is empty, white space, or contains <c>/</c>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// An earlier call added features to <paramref name="services"/> for another service.
+    /// </exception>
     /// <example>
     /// <code>
-    /// builder.Services.AddFeatures(features =&gt; features
+    /// builder.Services.AddFeatures("hr", features =&gt; features
     ///     .RegisterFeature&lt;Fire, Fire.Rule&gt;()
     ///     .RegisterFeature&lt;EmployeeReview, AnySignedInCaller&lt;EmployeeReview.Args&gt;&gt;());
     ///
     /// app.MapPost("/invoke", (Link link, ClaimsPrincipal user, Features features) =&gt; features.Invoke(link, user));
     /// </code>
     /// </example>
-    public static IServiceCollection AddFeatures(this IServiceCollection services, Action<FeaturesBuilder> register)
+    public static IServiceCollection AddFeatures(this IServiceCollection services, string service, Action<FeaturesBuilder> register)
     {
-        var builder = new FeaturesBuilder(services);
+        var builder = new FeaturesBuilder(services, service);
         register(builder);
         services.TryAddSingleton(provider => new Features(provider, builder.Registry));
         return services;

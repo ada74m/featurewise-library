@@ -17,8 +17,6 @@ public interface IEventPublisher
 // event's type as the attribute "type" too, so a subscription's filter policy can pick the events it wants.
 public class SnsEventPublisher(IAmazonSimpleNotificationService sns, Invocation invocation, string topicArn) : IEventPublisher
 {
-    public const string Source = "SampleService";
-
     // Events are a public contract, so they're written as public APIs write JSON: in camelCase.
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -39,7 +37,7 @@ public class SnsEventPublisher(IAmazonSimpleNotificationService sns, Invocation 
         {
             ["specversion"] = "1.0",
             ["id"] = id.ToString(),
-            ["source"] = Source,
+            ["source"] = Service.Id,
             ["type"] = type,
             ["time"] = DateTimeOffset.UtcNow,
             ["datacontenttype"] = "application/json",

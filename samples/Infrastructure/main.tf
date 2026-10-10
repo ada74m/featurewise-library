@@ -62,11 +62,11 @@ module "scheduled_worker" {
   schedules = {
     review-reminders = {
       expression = "cron(0 8 ? * MON-FRI *)"
-      link       = jsonencode({ "$feature" = "SendReviewReminders" })
+      link       = jsonencode({ "$feature" = "hr/SendReviewReminders" })
     }
     archive-leavers = {
       expression = "cron(0 3 1 * ? *)"
-      link       = jsonencode({ "$feature" = "ArchiveLeavers", AfterDays = 90 })
+      link       = jsonencode({ "$feature" = "hr/ArchiveLeavers", AfterDays = 90 })
     }
   }
 }

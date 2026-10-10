@@ -4,12 +4,14 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Featurewise;
 
-// What Features needs to know about registered features beyond the container: their names and result
-// types, which JSON serialization uses. One registry is shared by a service collection's builders and
-// its Features.
-internal sealed class FeatureRegistry
+// What Features needs to know about registered features beyond the container: the service they belong
+// to, and their names and result types, which JSON serialization uses. One registry is shared by a
+// service collection's builders and its Features.
+internal sealed class FeatureRegistry(string service)
 {
     private readonly Dictionary<Type, string> _featureNamesByArgsType = new();
+
+    public string Service { get; } = service;
     private readonly HashSet<Type> _resultTypes = new();
 
     // Adding a feature again under the same name does nothing, so a feature's links can be registered
@@ -39,8 +41,10 @@ internal sealed class FeatureRegistry
     }
 
     // Makes every link type, concrete or a base such as Link or Link<TResult>, polymorphic over the registered
-    // links it could be, using feature names as type discriminators. A concrete link counts as one of
-    // its own derived types, so it carries its feature name however it's declared.
+    // links it could be, using feature names qualified by the service, such as hr/Fire, as type
+    // discriminators. A concrete link counts as one of its own derived types, so it carries its feature
+    // name however it's declared. A link naming no service or another one matches no discriminator, so
+    // reading it fails.
     private void AddFeatureNamesToLinks(JsonTypeInfo typeInfo)
     {
         if (typeInfo.Kind != JsonTypeInfoKind.Object || !typeof(Link).IsAssignableFrom(typeInfo.Type))
@@ -48,7 +52,7 @@ internal sealed class FeatureRegistry
 
         var derivedTypes = _featureNamesByArgsType
             .Where(entry => typeInfo.Type.IsAssignableFrom(entry.Key))
-            .Select(entry => new JsonDerivedType(entry.Key, entry.Value))
+            .Select(entry => new JsonDerivedType(entry.Key, $"{Service}/{entry.Value}"))
             .ToList();
 
         // Without this, a link to an unregistered feature would be written without its arguments
