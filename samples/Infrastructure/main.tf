@@ -5,6 +5,8 @@ locals {
   artifacts_dir = coalesce(var.artifacts_dir, "${path.root}/../artifacts")
 }
 
+data "aws_caller_identity" "current" {}
+
 module "core" {
   source = "../SampleService/Infrastructure"
 
@@ -34,8 +36,8 @@ module "ui_backend" {
   employees_policy_json      = module.core.employees_policy_json
   events_topic_arn           = module.core.events_topic_arn
   events_publish_policy_json = module.core.events_publish_policy_json
-  jwt_issuer                 = var.jwt_issuer
-  jwt_audience               = var.jwt_audience
+  jwt_issuer                 = local.jwt_issuer
+  jwt_audience               = local.jwt_audience
 }
 
 module "public_api" {
@@ -45,7 +47,7 @@ module "public_api" {
   publish_dir                = "${local.artifacts_dir}/SampleService.PublicApi"
   employees_table_name       = module.core.employees_table_name
   employees_read_policy_json = module.core.employees_read_policy_json
-  auth_domain                = coalesce(var.public_api_auth_domain, "${var.name_prefix}-public-api")
+  auth_domain                = coalesce(var.public_api_auth_domain, "${var.name_prefix}-public-api-${data.aws_caller_identity.current.account_id}")
   clients                    = var.public_api_clients
 }
 

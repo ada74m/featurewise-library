@@ -16,18 +16,33 @@ variable "artifacts_dir" {
 }
 
 variable "jwt_issuer" {
-  description = "The issuer of UI backend callers' tokens, such as a Cognito user pool's URL. Without one, every UI backend caller is anonymous."
+  description = "The issuer of UI users' tokens: the estate's sign-in, such as a Cognito user pool's URL. Without one, a dev user pool is created in its place, with the users in dev_users."
   type        = string
   default     = null
 }
 
 variable "jwt_audience" {
-  type    = list(string)
-  default = []
+  description = "The audiences a UI user's token may be for, such as the UI's Cognito app client id. Ignored without jwt_issuer."
+  type        = list(string)
+  default     = []
+}
+
+variable "dev_users" {
+  description = "With the dev user pool, the people to create: each a user named by their employee id, with a password, and an employee record. Managers join the manager group."
+  type = map(object({
+    name       = string
+    manager    = optional(bool, false)
+    manager_id = optional(string)
+    review_due = optional(string, "2027-01-15")
+  }))
+  default = {
+    m1 = { name = "Mia", manager = true }
+    e1 = { name = "Ed", manager_id = "m1" }
+  }
 }
 
 variable "public_api_auth_domain" {
-  description = "The prefix of the public API's token endpoint domain, which must be unique in the region. Defaults to <name_prefix>-public-api."
+  description = "The prefix of the public API's token endpoint domain, which must be unique in the region across all AWS accounts. Defaults to <name_prefix>-public-api-<account id>."
   type        = string
   default     = null
 }

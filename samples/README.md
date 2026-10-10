@@ -29,17 +29,41 @@ A message is different: `IMessenger` sends text to a particular person, such as 
 
 Each project keeps the Terraform for its own resources in its `Infrastructure` folder, as a module. `Infrastructure/` here is the root module, which calls them and passes one's outputs to another, such as the queue worker's queue URL to the UI backend. The functions share `Infrastructure/modules/lambda-function`.
 
-Publish each function, then plan from the root module:
+## Deploying
+
+You need AWS credentials for the account to deploy to, Terraform, the .NET SDK, the AWS CLI and jq. `deploy.sh` publishes each function for Lambda's arm64 runtime into `artifacts/`, then runs `terraform apply` from the root module, passing on its arguments:
 
 ```
-for project in UiBackend PublicApi ScheduledWorker QueueWorker; do
-  dotnet publish samples/SampleService.$project -c Release -r linux-arm64 --self-contained false \
-    -o samples/artifacts/SampleService.$project
-done
+samples/deploy.sh -var name_prefix=adam
+```
 
+`name_prefix` names every resource, so each developer can have a stack of their own; `terraform destroy` in `samples/Infrastructure` removes it. State is local until a backend is configured in `Infrastructure/versions.tf`.
+
+Without `jwt_issuer`, a dev user pool stands in for the estate's sign-in, with the people in `dev_users`: by default Mia (`m1`), a manager, and Ed (`e1`), who reports to her. Each is a user named by their employee id with a generated password, and an employee record. To call the UI backend as Mia:
+
+```
 cd samples/Infrastructure
-terraform init
-terraform plan -var jwt_issuer=https://cognito-idp.eu-west-2.amazonaws.com/<user pool> -var 'jwt_audience=["<app client>"]'
+password=$(terraform output -json dev_user_passwords | jq -r .m1)
+token=$(aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH \
+  --client-id "$(terraform output -raw dev_ui_client_id)" \
+  --auth-parameters "USERNAME=m1,PASSWORD=$password" \
+  --query AuthenticationResult.AccessToken --output text)
+
+curl -X POST "$(terraform output -raw ui_backend_url)/EmployeeDetails" \
+  -H "Authorization: Bearer $token" -d '{"EmployeeId":"e1"}'
 ```
 
-Without `jwt_issuer`, every UI backend caller is anonymous, and every feature the UI backend offers refuses them. `public_api_clients` lists the public API's third-party clients and their scopes; `terraform output -json public_api_clients` gives each one's id and secret, and `public_api_token_url` is where they trade them for a token. The public API throttles all clients together; quotas per client would need API keys on a REST API, or WAF rules. Without `directory_events_topic_arn`, the queue worker subscribes to no other service's events. State is local until a backend is configured in `Infrastructure/versions.tf`.
+With `jwt_issuer` and `jwt_audience`, the UI backend accepts the estate's tokens instead, and no dev pool is made.
+
+`public_api_clients` lists the public API's third-party clients and their scopes. A client trades its id and secret for a token at the token URL:
+
+```
+client=$(terraform output -json public_api_clients | jq '.["example-partner"]')
+token=$(curl -s -u "$(jq -r .client_id <<<"$client"):$(jq -r .client_secret <<<"$client")" \
+  -d 'grant_type=client_credentials&scope=hr/employees.read' \
+  "$(terraform output -raw public_api_token_url)" | jq -r .access_token)
+
+curl "$(terraform output -raw public_api_url)/v1/employees/e1" -H "Authorization: Bearer $token"
+```
+
+The public API throttles all clients together; quotas per client would need API keys on a REST API, or WAF rules. Without `directory_events_topic_arn`, the queue worker subscribes to no other service's events.

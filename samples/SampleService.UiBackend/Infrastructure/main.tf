@@ -33,8 +33,6 @@ resource "aws_apigatewayv2_integration" "function" {
 # Verifies callers' tokens, so the function trusts the claims it's given. API Gateway refuses a request
 # without a valid token before it reaches the function.
 resource "aws_apigatewayv2_authorizer" "jwt" {
-  count = var.jwt_issuer == null ? 0 : 1
-
   api_id           = aws_apigatewayv2_api.api.id
   name             = "jwt"
   authorizer_type  = "JWT"
@@ -51,8 +49,8 @@ resource "aws_apigatewayv2_route" "features" {
   api_id             = aws_apigatewayv2_api.api.id
   route_key          = "POST /{feature}"
   target             = "integrations/${aws_apigatewayv2_integration.function.id}"
-  authorization_type = var.jwt_issuer == null ? "NONE" : "JWT"
-  authorizer_id      = var.jwt_issuer == null ? null : aws_apigatewayv2_authorizer.jwt[0].id
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
 }
 
 resource "aws_apigatewayv2_stage" "default" {
