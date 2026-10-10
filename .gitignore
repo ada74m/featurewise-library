@@ -8,5 +8,6 @@ obj/
 .terraform/
 *.tfstate
 *.tfstate.*
-samples/Infrastructure/.build/
-samples/artifacts/
+samples/out/
+# Modules don't keep lock files; roots do.
+samples/Infrastructure/.terraform.lock.hcl

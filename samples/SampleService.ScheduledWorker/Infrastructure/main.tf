@@ -14,7 +14,7 @@ module "function" {
   source = "../../Infrastructure/modules/lambda-function"
 
   name        = "${var.name_prefix}-scheduled-worker"
-  publish_dir = var.publish_dir
+  package_zip = "${path.module}/../../functions/SampleService.ScheduledWorker.zip"
   handler     = "SampleService.ScheduledWorker::SampleService.ScheduledWorker.Function::Handle"
   policy_json = data.aws_iam_policy_document.function.json
   timeout     = 300

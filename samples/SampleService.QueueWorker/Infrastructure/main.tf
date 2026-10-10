@@ -31,7 +31,7 @@ module "function" {
   source = "../../Infrastructure/modules/lambda-function"
 
   name        = "${var.name_prefix}-queue-worker"
-  publish_dir = var.publish_dir
+  package_zip = "${path.module}/../../functions/SampleService.QueueWorker.zip"
   handler     = "SampleService.QueueWorker::SampleService.QueueWorker.Function::Handle"
   policy_json = data.aws_iam_policy_document.function.json
   environment = {

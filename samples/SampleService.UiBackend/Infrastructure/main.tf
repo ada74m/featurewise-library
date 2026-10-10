@@ -9,7 +9,7 @@ module "function" {
   source = "../../Infrastructure/modules/lambda-function"
 
   name        = "${var.name_prefix}-ui-backend"
-  publish_dir = var.publish_dir
+  package_zip = "${path.module}/../../functions/SampleService.UiBackend.zip"
   handler     = "SampleService.UiBackend::SampleService.UiBackend.Function::Handle"
   policy_json = data.aws_iam_policy_document.function.json
   environment = {

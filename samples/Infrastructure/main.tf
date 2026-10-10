@@ -1,9 +1,6 @@
-# The sample service: the core's resources and each entrypoint's, from the modules beside each project.
-# Publish every project into artifacts_dir first; see samples/README.md.
-
-locals {
-  artifacts_dir = coalesce(var.artifacts_dir, "${path.root}/../artifacts")
-}
+# The hr service: the core's resources and each entrypoint's, from the modules beside each project. This
+# is the module a package carries, with each function's zip in its functions folder. An environment
+# supplies the provider, the state, and the inputs that differ between environments.
 
 data "aws_caller_identity" "current" {}
 
@@ -17,7 +14,6 @@ module "queue_worker" {
   source = "../SampleService.QueueWorker/Infrastructure"
 
   name_prefix                = var.name_prefix
-  publish_dir                = "${local.artifacts_dir}/SampleService.QueueWorker"
   employees_table_name       = module.core.employees_table_name
   employees_policy_json      = module.core.employees_policy_json
   events_topic_arn           = module.core.events_topic_arn
@@ -31,20 +27,18 @@ module "ui_backend" {
   source = "../SampleService.UiBackend/Infrastructure"
 
   name_prefix                = var.name_prefix
-  publish_dir                = "${local.artifacts_dir}/SampleService.UiBackend"
   employees_table_name       = module.core.employees_table_name
   employees_policy_json      = module.core.employees_policy_json
   events_topic_arn           = module.core.events_topic_arn
   events_publish_policy_json = module.core.events_publish_policy_json
-  jwt_issuer                 = local.jwt_issuer
-  jwt_audience               = local.jwt_audience
+  jwt_issuer                 = var.jwt_issuer
+  jwt_audience               = var.jwt_audience
 }
 
 module "public_api" {
   source = "../SampleService.PublicApi/Infrastructure"
 
   name_prefix                = var.name_prefix
-  publish_dir                = "${local.artifacts_dir}/SampleService.PublicApi"
   employees_table_name       = module.core.employees_table_name
   employees_read_policy_json = module.core.employees_read_policy_json
   auth_domain                = coalesce(var.public_api_auth_domain, "${var.name_prefix}-public-api-${data.aws_caller_identity.current.account_id}")
@@ -55,7 +49,6 @@ module "scheduled_worker" {
   source = "../SampleService.ScheduledWorker/Infrastructure"
 
   name_prefix           = var.name_prefix
-  publish_dir           = "${local.artifacts_dir}/SampleService.ScheduledWorker"
   employees_table_name  = module.core.employees_table_name
   employees_policy_json = module.core.employees_policy_json
   work_queue_url        = module.queue_worker.work_queue_url

@@ -1,11 +1,5 @@
 # A .NET function on Lambda's managed dotnet10 runtime, with its own role and log group.
 
-data "archive_file" "package" {
-  type        = "zip"
-  source_dir  = var.publish_dir
-  output_path = "${path.root}/.build/${var.name}.zip"
-}
-
 data "aws_iam_policy_document" "assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -43,8 +37,8 @@ resource "aws_lambda_function" "function" {
   runtime          = "dotnet10"
   architectures    = ["arm64"]
   handler          = var.handler
-  filename         = data.archive_file.package.output_path
-  source_code_hash = data.archive_file.package.output_base64sha256
+  filename         = var.package_zip
+  source_code_hash = filebase64sha256(var.package_zip)
   timeout          = var.timeout
   memory_size      = var.memory_size
 

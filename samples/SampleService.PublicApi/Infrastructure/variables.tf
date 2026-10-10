@@ -3,11 +3,6 @@ variable "name_prefix" {
   type        = string
 }
 
-variable "publish_dir" {
-  description = "The directory dotnet publish wrote this project to."
-  type        = string
-}
-
 variable "employees_table_name" {
   type = string
 }

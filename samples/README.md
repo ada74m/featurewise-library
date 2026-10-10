@@ -27,22 +27,28 @@ A message is different: `IMessenger` sends text to a particular person, such as 
 
 ## Infrastructure
 
-Each project keeps the Terraform for its own resources in its `Infrastructure` folder, as a module. `Infrastructure/` here is the root module, which calls them and passes one's outputs to another, such as the queue worker's queue URL to the UI backend. The functions share `Infrastructure/modules/lambda-function`.
+Each project keeps the Terraform for its own resources in its `Infrastructure` folder, as a module. `Infrastructure/` here is the service's module, which calls them and passes one's outputs to another, such as the queue worker's queue URL to the UI backend. The functions share `Infrastructure/modules/lambda-function`. The service's module has no provider or state of its own: an environment supplies those, with the inputs that differ between environments, such as the issuer of its users' tokens.
+
+## Packages and CI
+
+`package.sh <version> <out-dir>` builds the service's package: `hr-<version>.zip`, holding the Terraform modules in their places and each function's zip in `functions/`. An environment uses it as a module, `source = "s3::https://…/hr/<version>.zip//Infrastructure"`; the `//` makes Terraform fetch the whole package, so the modules find each other and the functions.
+
+The `CI` workflow (`.github/workflows/ci.yml`) builds the solution with warnings as errors, runs the tests, checks the Terraform, and builds a package, for every pull request and push to main. Each push to main also publishes the package to the estate's artifacts bucket as `hr/<yyyy.mm.dd>.<run>.zip` and tags the commit `hr/<version>`, once the repository has the variables `AWS_REGION`, `ARTIFACTS_BUCKET` and `PUBLISH_ROLE_ARN` from the estate's bootstrap. Environments, each pinning the services' versions, live in the separate `estate-environments` repository, which deploys them.
 
 ## Deploying
 
-You need AWS credentials for the account to deploy to, Terraform, the .NET SDK, the AWS CLI and jq. `deploy.sh` publishes each function for Lambda's arm64 runtime into `artifacts/`, then runs `terraform apply` from the root module, passing on its arguments:
+Real environments deploy from the environments repository. For your own stack, from your working tree, you need AWS credentials, Terraform, the .NET SDK, the AWS CLI and jq. `deploy.sh` builds a package into `out/`, as CI does, then runs `terraform apply` in `DevEnvironment/`, which uses the unpacked package and passes on its arguments:
 
 ```
 samples/deploy.sh -var name_prefix=adam
 ```
 
-`name_prefix` names every resource, so each developer can have a stack of their own; `terraform destroy` in `samples/Infrastructure` removes it. State is local until a backend is configured in `Infrastructure/versions.tf`.
+`name_prefix` names every resource, so each developer can have a stack of their own; `terraform destroy` in `samples/DevEnvironment` removes it. Its state is local.
 
-Without `jwt_issuer`, a dev user pool stands in for the estate's sign-in, with the people in `dev_users`: by default Mia (`m1`), a manager, and Ed (`e1`), who reports to her. Each is a user named by their employee id with a generated password, and an employee record. To call the UI backend as Mia:
+A dev user pool stands in for the estate's sign-in, with the people in `dev_users`: by default Mia (`m1`), a manager, and Ed (`e1`), who reports to her. Each is a user named by their employee id with a generated password, and an employee record. To call the UI backend as Mia:
 
 ```
-cd samples/Infrastructure
+cd samples/DevEnvironment
 password=$(terraform output -json dev_user_passwords | jq -r .m1)
 token=$(aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH \
   --client-id "$(terraform output -raw dev_ui_client_id)" \
@@ -52,8 +58,6 @@ token=$(aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH \
 curl -X POST "$(terraform output -raw ui_backend_url)/EmployeeDetails" \
   -H "Authorization: Bearer $token" -d '{"EmployeeId":"e1"}'
 ```
-
-With `jwt_issuer` and `jwt_audience`, the UI backend accepts the estate's tokens instead, and no dev pool is made.
 
 `public_api_clients` lists the public API's third-party clients and their scopes. A client trades its id and secret for a token at the token URL:
 

@@ -5,7 +5,7 @@ module "function" {
   source = "../../Infrastructure/modules/lambda-function"
 
   name        = "${var.name_prefix}-public-api"
-  publish_dir = var.publish_dir
+  package_zip = "${path.module}/../../functions/SampleService.PublicApi.zip"
   handler     = "SampleService.PublicApi::SampleService.PublicApi.Function::Handle"
   policy_json = var.employees_read_policy_json
   environment = {

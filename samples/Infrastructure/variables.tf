@@ -1,44 +1,16 @@
-variable "region" {
-  type    = string
-  default = "eu-west-2"
-}
-
 variable "name_prefix" {
-  description = "Prefixes every resource's name."
+  description = "Prefixes every resource's name, so several copies of the service can share an account."
   type        = string
-  default     = "hr"
-}
-
-variable "artifacts_dir" {
-  description = "Where each project was published, one directory per project. Defaults to samples/artifacts."
-  type        = string
-  default     = null
 }
 
 variable "jwt_issuer" {
-  description = "The issuer of UI users' tokens: the estate's sign-in, such as a Cognito user pool's URL. Without one, a dev user pool is created in its place, with the users in dev_users."
+  description = "The issuer of UI users' tokens: the estate's sign-in, such as a Cognito user pool's URL."
   type        = string
-  default     = null
 }
 
 variable "jwt_audience" {
-  description = "The audiences a UI user's token may be for, such as the UI's Cognito app client id. Ignored without jwt_issuer."
+  description = "The audiences a UI user's token may be for, such as the UI's Cognito app client id."
   type        = list(string)
-  default     = []
-}
-
-variable "dev_users" {
-  description = "With the dev user pool, the people to create: each a user named by their employee id, with a password, and an employee record. Managers join the manager group."
-  type = map(object({
-    name       = string
-    manager    = optional(bool, false)
-    manager_id = optional(string)
-    review_due = optional(string, "2027-01-15")
-  }))
-  default = {
-    m1 = { name = "Mia", manager = true }
-    e1 = { name = "Ed", manager_id = "m1" }
-  }
 }
 
 variable "public_api_auth_domain" {

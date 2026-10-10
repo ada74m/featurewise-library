@@ -3,8 +3,8 @@ variable "name" {
   type        = string
 }
 
-variable "publish_dir" {
-  description = "The directory dotnet publish wrote the function to."
+variable "package_zip" {
+  description = "The function's code: a zip of what dotnet publish wrote, from the service's package."
   type        = string
 }
 
