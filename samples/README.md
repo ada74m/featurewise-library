@@ -46,7 +46,7 @@ cd samples/Infrastructure
 password=$(terraform output -json dev_user_passwords | jq -r .m1)
 token=$(aws cognito-idp initiate-auth --auth-flow USER_PASSWORD_AUTH \
   --client-id "$(terraform output -raw dev_ui_client_id)" \
-  --auth-parameters "USERNAME=m1,PASSWORD=$password" \
+  --auth-parameters "$(jq -n --arg password "$password" '{USERNAME: "m1", PASSWORD: $password}')" \
   --query AuthenticationResult.AccessToken --output text)
 
 curl -X POST "$(terraform output -raw ui_backend_url)/EmployeeDetails" \
