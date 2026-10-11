@@ -80,6 +80,8 @@ app.MapPost("/invoke", (Link link, ClaimsPrincipal user, Features features) => f
 
 Either way, each invocation gets a dependency injection scope of its own, so a feature never shares a database context with the request that invoked it.
 
+An endpoint that takes the feature's name from the request, such as `POST /{feature}`, asks `IsInvocable("hr/Fire")` first, so it can answer a feature it doesn't invoke as not found before reading the arguments.
+
 ## Who may invoke what
 
 Every invocation has a caller, and every invocation is refused unless a rule approves it. A feature is registered with its rules, so every feature has at least one.

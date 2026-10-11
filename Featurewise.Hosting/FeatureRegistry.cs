@@ -28,6 +28,11 @@ internal sealed class FeatureRegistry(string service)
         _resultTypes.Add(resultType);
     }
 
+    // The arguments type of the feature, or the links, registered under a name unqualified by the service,
+    // or null if nothing is.
+    public Type? ArgsTypeNamed(string name) =>
+        _featureNamesByArgsType.FirstOrDefault(entry => entry.Value == name).Key;
+
     public JsonSerializerOptions ConfigureJson(JsonSerializerOptions options)
     {
         options.TypeInfoResolver = (options.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver())

@@ -26,6 +26,20 @@ public class HostingTests
     }
 
     [Fact]
+    public async Task AHostedFeatureIsInvocableByItsQualifiedName()
+    {
+        var services = new ServiceCollection();
+        services.AddFeatures("hr", features => features
+            .RegisterFeature<Fire, FireAuthorization>());
+        await using var host = BuildHost(services);
+
+        var features = host.GetRequiredService<Features>();
+
+        Assert.True(features.IsInvocable("hr/Fire"));
+        Assert.False(features.IsInvocable("hr/Remind"));
+    }
+
+    [Fact]
     public async Task HostedFeaturesUseTheHostsServicesInScopesOfTheirOwn()
     {
         var services = new ServiceCollection();

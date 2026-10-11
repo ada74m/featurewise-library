@@ -368,6 +368,45 @@ public class Features : IDisposable, IAsyncDisposable
     public JsonSerializerOptions ConfigureJson(JsonSerializerOptions options) => _registry.ConfigureJson(options);
 
     /// <summary>
+    /// Whether this <see cref="Features"/> invokes the feature with the given name, qualified by the service
+    /// as in a link's <c>$feature</c>, such as <c>hr/Fire</c>.
+    /// </summary>
+    /// <param name="feature">The feature's name, qualified by the service.</param>
+    /// <returns>
+    /// <see langword="true"/> if the feature itself is registered; <see langword="false"/> if nothing by that
+    /// name is, if only its links are, or if the name qualifies it with another service.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// This says nothing about who may invoke the feature, which its rules decide on each invocation. An
+    /// endpoint that takes a feature's name from a request, such as from its URL, checks it here first, so
+    /// that it can answer a feature it doesn't invoke as not found: arguments can't be read as a link to a
+    /// feature that isn't registered, and a link to one whose links alone are registered can't be invoked.
+    /// </para>
+    /// <para>
+    /// A standalone <see cref="Features"/> that isn't built yet is built, which closes registration.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="feature"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Building a standalone <see cref="Features"/> found a registered service that depends on a service that
+    /// isn't registered, or on a feature.
+    /// </exception>
+    public bool IsInvocable(string feature)
+    {
+        ArgumentNullException.ThrowIfNull(feature);
+
+        var prefix = Service + "/";
+        if (!feature.StartsWith(prefix, StringComparison.Ordinal))
+            return false;
+
+        var argsType = _registry.ArgsTypeNamed(feature[prefix.Length..]);
+        var featureType = argsType is null ? null : GenericArgumentsOf(argsType, typeof(Link<,>))?[0];
+        return featureType is not null
+            && Provider.GetRequiredService<IServiceProviderIsKeyedService>().IsKeyedService(featureType, FeatureKey);
+    }
+
+    /// <summary>
     /// Invokes the feature that <paramref name="link"/> names, with the arguments it carries, and returns
     /// its result typed as the link promises.
     /// </summary>

@@ -27,6 +27,30 @@ public class RegistrationTests
     }
 
     [Fact]
+    public async Task ARegisteredFeatureIsInvocableByItsNameQualifiedByTheService()
+    {
+        await using var features = new Features("hr")
+            .RegisterFeature<Fire, FireAuthorization>()
+            .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>();
+
+        Assert.True(features.IsInvocable("hr/Fire"));
+        Assert.True(features.IsInvocable("hr/review-employee"));
+        Assert.False(features.IsInvocable("hr/EmployeeReview"));
+        Assert.False(features.IsInvocable("Fire"));
+        Assert.False(features.IsInvocable("payroll/Fire"));
+        Assert.False(features.IsInvocable("hr/Nothing"));
+    }
+
+    [Fact]
+    public async Task AFeatureWhoseLinksAloneAreRegisteredIsNotInvocable()
+    {
+        await using var features = new Features("hr")
+            .RegisterLinksTo<Fire>();
+
+        Assert.False(features.IsInvocable("hr/Fire"));
+    }
+
+    [Fact]
     public async Task AFeatureCanBeRegisteredBeforeOrAfterItsLinks()
     {
         await using var features = new Features("hr");
