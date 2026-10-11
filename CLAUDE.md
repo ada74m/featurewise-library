@@ -16,7 +16,7 @@ A change is done when the build is warning-free (doc comments included) and the 
 
 ## What this is
 
-Featurewise is a library (`Featurewise/`) for structuring a service as a set of **features** (commands, queries, event handlers) invoked through **links** (records that name a feature and carry its arguments). `README.md` is the user-facing explanation of the model and its rules; read it before changing behaviour. The XML doc comments in the library are the detailed spec of each API's behaviour and are kept in step with the code (`GenerateDocumentationFile` is on, so a public member without one produces a build warning).
+Featurewise is a library (`Featurewise/` and `Featurewise.Hosting/`) for structuring a service as a set of **features** (commands, queries, event handlers) invoked through **links** (records that name a feature and carry its arguments). `README.md` is the user-facing explanation of the model and its rules; read it before changing behaviour. The XML doc comments in the library are the detailed spec of each API's behaviour and are kept in step with the code (`GenerateDocumentationFile` is on, so a public member without one produces a build warning).
 
 The design rules the code enforces, which changes must preserve (README "Boundaries"):
 - **Features don't invoke features.** A feature that leads to another returns a link to it; shared logic goes in a service.
@@ -34,6 +34,8 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 
 ## Architecture
 
+`Featurewise/` (the `Featurewise.Core` package) holds what a service's core is written with: `Feature`, `IFeature`, the `Link` hierarchy, `Invocation`, `LinkPermissions`, `InvokeRequirement`, `SystemCaller`, the `Any*Caller` rules, `FeatureNameAttribute` and `Nil`. `Featurewise.Hosting/` holds what entrypoints use: `Features`, `FeaturesBuilder`, `FeatureRegistry`, `AddFeatures` and `InvocationDeniedException`. Core must not depend on Hosting, so a core that references only `Featurewise.Core` can't invoke features. Hosting creates `Invocation` and `LinkPermissions` through Core's internals (`InternalsVisibleTo`); doc comments in Core name Hosting's types with `<c>`, since a `cref` can't reach them.
+
 - **`Link` hierarchy** (`Link.cs`): `Link` → `Link<TResult>` → `Link<TFeature, TResult>`, with `private protected` constructors so every link must derive from the last and therefore names exactly one feature. A feature's `Args` record is its link. `CausedBy` is stamped from `Activity.Current` at construction, excluded from equality, and cleared on deserialization unless the JSON supplied it.
 - **`Feature<TFeature, TArgs, TResult>`** (`Feature.cs`) implements the non-generic `IFeature` so `Features` can invoke any feature from a plain `Link`. `TFeature` must be the deriving class itself; the compiler can't enforce that, so `FeaturesBuilder.RegisterFeature` checks it by reflection.
 - **`Features`** (`Features.cs`) is the single invocation pipeline, in two modes sharing the same `Invoke`:
@@ -48,7 +50,7 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 
 ## Package
 
-The library ships as the NuGet package `Featurewise.Core` (its namespace stays `Featurewise`), published to GitHub Packages at `https://nuget.pkg.github.com/ada74m/index.json`. `Featurewise/Featurewise.csproj` holds the package's metadata: versions are `0.1.0-preview.<run>` from CI and `0.1.0-dev` from a local `dotnet pack Featurewise -c Release`. `.github/workflows/ci.yml` builds warning-free and tests on every pull request and push; each push to main also packs and publishes a preview. Services pin a version, such as the HR sample in the separate `hr-service` repo, so a change one of them needs here means publishing a preview and bumping its pin; `hr-service` can also build against a local checkout of this repo.
+The library ships as two NuGet packages, `Featurewise.Core` and `Featurewise.Hosting` (both in the namespace `Featurewise`), always together at one version, published to GitHub Packages at `https://nuget.pkg.github.com/ada74m/index.json`. `Directory.Build.props` holds their shared metadata and version: `0.1.0-preview.<run>` from CI and `0.1.0-dev` from a local `dotnet pack FeaturewiseProto.sln -c Release`. Each project file holds its package's id and description. Because Hosting uses Core's internals, its package depends on exactly its own version of Core, which a target in `Featurewise.Hosting.csproj` arranges. `.github/workflows/ci.yml` builds warning-free and tests on every pull request and push; each push to main also packs and publishes both as a preview. Services pin a version, such as the HR sample in the separate `hr-service` repo, so a change one of them needs here means publishing a preview and bumping its pin; `hr-service` can also build against a local checkout of this repo.
 
 ## Tests
 

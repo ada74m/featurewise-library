@@ -9,7 +9,7 @@ namespace Featurewise;
 /// <remarks>
 /// <para>
 /// A link is refused unless one of its feature's rules approves it. A feature is registered with its
-/// rules, by <see cref="FeaturesBuilder.RegisterFeature{TFeature, TRule}"/>, so every feature has at
+/// rules, by <c>FeaturesBuilder.RegisterFeature</c>, so every feature has at
 /// least one. Write a rule nested in its feature, as in the example, or use a ready-made one:
 /// <see cref="AnyCaller{TArgs}"/>, <see cref="AnySignedInCaller{TArgs}"/> or <see cref="AnySystemCaller{TArgs}"/>.
 /// </para>

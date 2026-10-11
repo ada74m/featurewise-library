@@ -178,12 +178,18 @@ Each invocation logs its start, with its id, its cause and any idempotency key; 
 
 ## Installing
 
-The package is `Featurewise.Core`, published as previews to GitHub Packages. Add the feed, with a GitHub token that can read packages, then the package:
+Featurewise comes as two packages, published together at one version as previews to GitHub Packages:
+
+- `Featurewise.Core` is what a service's core is written with: `Feature`, links, `Invocation`, `LinkPermissions`, `InvokeRequirement`, `SystemCaller` and the ready-made rules.
+- `Featurewise.Hosting` is what its entrypoints invoke features with: `Features`, its registration methods, `AddFeatures` and `InvocationDeniedException`. It depends on exactly the same version of `Featurewise.Core`.
+
+A core project that references only `Featurewise.Core` can't build a container or invoke a feature, so the compiler keeps features from invoking features. Both packages use the namespace `Featurewise`. Add the feed, with a GitHub token that can read packages, then the package each project needs:
 
 ```
 dotnet nuget add source https://nuget.pkg.github.com/ada74m/index.json --name featurewise \
   --username <github user> --password <token with read:packages>
-dotnet add package Featurewise.Core --prerelease
+dotnet add package Featurewise.Core --prerelease       # in the service's core
+dotnet add package Featurewise.Hosting --prerelease    # in each entrypoint
 ```
 
 ## Building and testing
@@ -192,4 +198,4 @@ dotnet add package Featurewise.Core --prerelease
 dotnet test
 ```
 
-`global.json` pins the .NET 10 SDK to released versions. `Featurewise` is the library; `Featurewise.Tests` holds its tests and the small features they exercise.
+`global.json` pins the .NET 10 SDK to released versions. `Featurewise` is `Featurewise.Core`, `Featurewise.Hosting` is `Featurewise.Hosting`, and `Featurewise.Tests` holds their tests and the small features they exercise.

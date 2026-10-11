@@ -9,7 +9,7 @@ namespace Featurewise;
 /// </summary>
 /// <remarks>
 /// <para>
-/// There is one per invocation, set by <see cref="Features"/> before any authorization handler or the
+/// There is one per invocation, set by <c>Features</c> before any authorization handler or the
 /// feature runs. Outside an invocation, such as in a host's own scopes, <see cref="Caller"/> throws and
 /// the other properties are empty.
 /// </para>
@@ -26,7 +26,7 @@ public sealed class Invocation
     {
     }
 
-    /// <summary>Who invoked the link, as passed to <see cref="Features"/>.</summary>
+    /// <summary>Who invoked the link, as passed to <c>Features</c>.</summary>
     /// <exception cref="InvalidOperationException">This isn't the scope of an invocation.</exception>
     public ClaimsPrincipal Caller =>
         _caller ?? throw new InvalidOperationException("the caller is only available during an invocation");
@@ -51,7 +51,7 @@ public sealed class Invocation
     /// <para>
     /// The entrypoint chooses the key, such as a queue message's id or an HTTP request's
     /// <c>Idempotency-Key</c> header, and passes it to
-    /// <see cref="Features.Invoke(Link, ClaimsPrincipal, string?, CancellationToken)"/>.
+    /// <c>Features.Invoke</c>.
     /// </para>
     /// </remarks>
     public string? IdempotencyKey { get; private set; }

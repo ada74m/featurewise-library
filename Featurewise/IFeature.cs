@@ -1,7 +1,7 @@
 ﻿namespace Featurewise;
 
 /// <summary>
-/// A feature, invoked without knowing its arguments or result types, which is how <see cref="Features"/>
+/// A feature, invoked without knowing its arguments or result types, which is how <c>Features</c>
 /// invokes every feature.
 /// </summary>
 /// <remarks>

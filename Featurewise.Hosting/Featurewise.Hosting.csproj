@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <RootNamespace>Featurewise</RootNamespace>
+    </PropertyGroup>
+
+    <!-- The package a service's entrypoints reference: registers features and invokes links. -->
+    <PropertyGroup>
+        <PackageId>Featurewise.Hosting</PackageId>
+        <Description>Registers Featurewise features, with their rules and dependencies, and invokes links through one pipeline, with the same scope, authorization, logging, tracing and cancellation. A service's entrypoints reference it; its core needs only Featurewise.Core.</Description>
+        <PackageTags>features;links;cqrs;hateoas;authorization</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Featurewise\Featurewise.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12"/>
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.12"/>
+    </ItemGroup>
+
+    <!-- This package uses Featurewise.Core's internals, so it depends on exactly its own version of it,
+         not that version or later as a project reference would by default. -->
+    <Target Name="DependOnExactlyThisVersionOfCore" AfterTargets="_GetProjectReferenceVersions">
+        <ItemGroup>
+            <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)" ProjectVersion="[%(ProjectVersion)]" />
+        </ItemGroup>
+    </Target>
+
+</Project>

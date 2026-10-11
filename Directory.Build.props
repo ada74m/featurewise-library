@@ -1,0 +1,19 @@
+<Project>
+
+    <!-- What the two packages, Featurewise.Core and Featurewise.Hosting, share. They ship together, at one
+         version: CI sets VersionSuffix to preview.<run>; local packs are 0.1.0-dev. -->
+    <PropertyGroup>
+        <VersionPrefix>0.1.0</VersionPrefix>
+        <VersionSuffix Condition="'$(VersionSuffix)' == ''">dev</VersionSuffix>
+        <Authors>Adam Rambridge</Authors>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <RepositoryUrl>https://github.com/ada74m/featurewise</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <!-- Symbols travel in the assembly, since GitHub Packages takes no symbol packages; Source Link
+             points debuggers at the commit's sources on GitHub. -->
+        <DebugType>embedded</DebugType>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    </PropertyGroup>
+
+</Project>

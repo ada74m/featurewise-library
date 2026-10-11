@@ -15,7 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Featurewise\Featurewise.csproj"/>
+        <ProjectReference Include="..\Featurewise.Hosting\Featurewise.Hosting.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -5,7 +5,7 @@
 /// </summary>
 /// <typeparam name="TFeature">
 /// The deriving class itself. The compiler can't enforce this, so
-/// <see cref="Features.RegisterFeature{TFeature, TRule}"/> rejects a feature that names any other class here.
+/// <c>Features.RegisterFeature</c> rejects a feature that names any other class here.
 /// </typeparam>
 /// <typeparam name="TArgs">
 /// The feature's arguments, which must be a link to this feature. By convention, a record named
@@ -19,7 +19,7 @@
 /// </typeparam>
 /// <remarks>
 /// <para>
-/// Register features with <see cref="Features.RegisterFeature{TFeature, TRule}"/>. Each invocation resolves a
+/// Register features with <c>Features.RegisterFeature</c>. Each invocation resolves a
 /// new instance in a new dependency injection scope, so a feature takes its dependencies through its
 /// constructor.
 /// </para>
@@ -90,7 +90,7 @@ public abstract class Feature<TFeature, TArgs, TResult> : IFeature<TResult>
     /// </param>
     /// <returns>The result of the invocation.</returns>
     /// <remarks>
-    /// Invoke features through <see cref="Features"/>, which also scopes, logs and traces
+    /// Invoke features through <c>Features</c>, which also scopes, logs and traces
     /// the invocation. Call this method directly only to test a feature in isolation.
     /// </remarks>
     public abstract Task<TResult> Invoke(TArgs args, CancellationToken cancellationToken);

@@ -6,7 +6,7 @@ namespace Featurewise;
 /// <summary>
 /// A potential invocation of a feature: it names the feature it would invoke and carries the
 /// arguments to invoke it with. Pass it to
-/// <see cref="Features.Invoke(Link, System.Security.Claims.ClaimsPrincipal, CancellationToken)"/> to invoke it.
+/// <c>Features.Invoke</c> to invoke it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,7 +16,7 @@ namespace Featurewise;
 /// </para>
 /// <para>
 /// Links are records, so they compare by value and can be serialized, stored, or sent to a client and
-/// invoked later. Serialize them with options set up by <see cref="Features.ConfigureJson"/>.
+/// invoked later. Serialize them with options set up by <c>Features.ConfigureJson</c>.
 /// </para>
 /// <para>
 /// A link can outlive the code that made it: a client holds it across a deployment, a queue holds it
@@ -47,7 +47,7 @@ public abstract record Link : IJsonOnDeserialized
     /// <remarks>
     /// <para>
     /// Set from <see cref="Activity.Current"/> when the link is constructed, so a link that a feature
-    /// creates records that feature's invocation. When the link is invoked, <see cref="Features"/> links
+    /// creates records that feature's invocation. When the link is invoked, <c>Features</c> links
     /// the new invocation's activity to this operation.
     /// </para>
     /// <para>
@@ -92,7 +92,7 @@ public abstract record Link : IJsonOnDeserialized
 
 /// <summary>
 /// A link whose invocation produces <typeparamref name="TResult"/>. Pass it to
-/// <see cref="Features.Invoke{TResult}(Link{TResult}, System.Security.Claims.ClaimsPrincipal, CancellationToken)"/>
+/// <c>Features.Invoke</c>
 /// to invoke it and get a typed result.
 /// </summary>
 /// <typeparam name="TResult">The type that invoking the link produces.</typeparam>

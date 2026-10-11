@@ -1,5 +1,6 @@
 # Builds and tests the library on every pull request and push to main. Each push to main also packs the
-# library as a preview of Featurewise.Core and publishes it to this account's GitHub Packages feed.
+# library as previews of Featurewise.Core and Featurewise.Hosting, at one version, and publishes them to this
+# account's GitHub Packages feed.
 name: CI
 
 on:
@@ -32,11 +33,11 @@ jobs:
         run: dotnet test FeaturewiseProto.sln --no-build
 
       - name: Pack
-        run: dotnet pack Featurewise -c Release -o out -p:VersionSuffix="$VERSION_SUFFIX" -p:ContinuousIntegrationBuild=true
+        run: dotnet pack FeaturewiseProto.sln -c Release -o out -p:VersionSuffix="$VERSION_SUFFIX" -p:ContinuousIntegrationBuild=true
 
       - uses: actions/upload-artifact@v7
         with:
-          name: Featurewise.Core
+          name: Featurewise
           path: out/*.nupkg
           if-no-files-found: error
 
@@ -47,7 +48,7 @@ jobs:
       - name: Tag the commit
         if: github.event_name == 'push'
         run: |
-          package=$(basename out/*.nupkg .nupkg)
+          package=$(basename out/Featurewise.Core.*.nupkg .nupkg)
           version=${package#Featurewise.Core.}
           git tag "v$version"
           git push origin "v$version"

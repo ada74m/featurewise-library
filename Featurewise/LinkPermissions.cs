@@ -8,12 +8,12 @@ namespace Featurewise;
 /// </summary>
 /// <remarks>
 /// <para>
-/// A feature takes this as a dependency. It applies the same rules that <see cref="Features"/>
+/// A feature takes this as a dependency. It applies the same rules that <c>Features</c>
 /// enforces when the link is invoked, so the links a feature offers are the links that will work.
 /// </para>
 /// <para>
 /// Offering a link doesn't authorize invoking it later: the link may come back changed, or the
-/// rules' answer may change, so <see cref="Features"/> checks again on every invocation.
+/// rules' answer may change, so <c>Features</c> checks again on every invocation.
 /// </para>
 /// </remarks>
 public sealed class LinkPermissions
