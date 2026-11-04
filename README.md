@@ -1,13 +1,13 @@
 # Featurewise
 
-A service is the set of things it can do, and each of those things is a feature: a command, a query or an event handler. Featurewise gives every feature the same shape, and gives the code that calls features one way to call any of them.
+A service is the set of things it can do, and each of those things is a feature: a query, a command or a worker. Featurewise gives every feature the same shape, and gives the code that calls features one way to call any of them.
 
-The call is a value. A **link** names a feature and carries the arguments to invoke it with. A link is a potential invocation: an entrypoint invokes it now, a feature returns it to say what the caller can do next, a queue carries it to a handler. **`Features`** invokes links, and wraps every invocation in the same scope, authorization, logging, tracing and cancellation.
+The call is a value. A **link** names a feature and carries the arguments to invoke it with. A link is a potential invocation: an entrypoint invokes it now, a feature returns it to say what the caller can do next, a queue carries it to a worker. **`Features`** invokes links, and wraps every invocation in the same scope, authorization, logging, tracing and cancellation.
 
 ## A feature and its link
 
 ```csharp
-public class Fire(IEmployeeStore employees) : Feature<Fire, Fire.Args, Fire.Result>
+public class Fire(IEmployeeStore employees) : Command<Fire, Fire.Args, Fire.Result>
 {
     public record Args(string EmployeeId) : Link<Fire, Result>;
 
@@ -36,6 +36,18 @@ public class Fire(IEmployeeStore employees) : Feature<Fire, Fire.Args, Fire.Resu
 `Fire.Result` has cases. An outcome the feature expects, such as an employee who isn't there, is a case it returns. Exceptions are left for what nobody expected: the database is down, the code is wrong.
 
 A feature takes its dependencies through its constructor, as any service does. It can also take `Invocation`, which says who invoked it, which request it serves, and where it sits in a trace.
+
+## Queries, commands and workers
+
+Every feature belongs to one of three families, and derives from its base class:
+
+- **`Query<TFeature, TArgs, TResult>`** answers a question and changes nothing, such as `EmployeeSearch`. It's safe to repeat.
+- **`Command<TFeature, TArgs, TResult>`** changes state for a caller who may be waiting to know how it went, such as `Fire`.
+- **`Worker<TFeature, TArgs>`** changes state with nobody waiting, such as `HandleEmployeeLeft`. Its result is always `Nil`.
+
+Anything someone might wait for is a command, even when a job sometimes invokes it. A worker is a feature nobody ever waits for.
+
+An entrypoint asks `features.IsQuery("hr/EmployeeSearch")` before invoking a feature in a way that may repeat it: a UI backend that answers GET, a client that retries, a cache. Deriving from `Query` is a promise the compiler can't check, so a query that writes anything a stakeholder would care about is a bug for review to catch.
 
 ## Invoking links
 
@@ -89,7 +101,7 @@ Every invocation has a caller, and every invocation is refused unless a rule app
 A rule is an authorization handler for `InvokeRequirement`, with the feature's arguments as the resource. It sees the caller and the arguments, and can load whatever else it needs. A rule that belongs to one feature lives inside it, beside its `Args` and `Result`:
 
 ```csharp
-public class Fire(IEmployeeStore employees) : Feature<Fire, Fire.Args, Fire.Result>
+public class Fire(IEmployeeStore employees) : Command<Fire, Fire.Args, Fire.Result>
 {
     ...
 
@@ -109,7 +121,7 @@ public class Fire(IEmployeeStore employees) : Feature<Fire, Fire.Args, Fire.Resu
 features.RegisterFeature<Fire, Fire.Rule>();
 ```
 
-Three rules are ready-made. `AnyCaller<OpeningHours.Args>` opens a feature to everyone. `AnySignedInCaller<EmployeeReview.Args>` opens one to every signed-in caller. A job invokes links as `SystemCaller.For("nightly-reminders")`, which is signed in and named but has no special powers; `AnySystemCaller<SendReminders.Args>` opens a feature to system callers alone, for the handlers and jobs that only the service itself should invoke.
+Three rules are ready-made. `AnyCaller<OpeningHours.Args>` opens a feature to everyone. `AnySignedInCaller<EmployeeReview.Args>` opens one to every signed-in caller. A job invokes links as `SystemCaller.For("nightly-reminders")`, which is signed in and named but has no special powers; `AnySystemCaller<HandleRemindersDue.Args>` opens a feature to system callers alone, for the workers that only the service itself should invoke.
 
 A feature may have up to three rules, and anyone one of them approves may invoke it: `RegisterFeature<Fire, Fire.Rule, AnySystemCaller<Fire.Args>>()` lets managers and jobs fire people. Each entrypoint names the rules for the features it registers, so a feature can be open to more callers through one entrypoint than another. `RegisterFeature` rejects a rule written for another feature's arguments, and a feature with ASP.NET's `[AllowAnonymous]`, which Featurewise doesn't honour.
 
@@ -135,9 +147,9 @@ Reading a link checks its arguments against their types. A missing required argu
 
 A link can outlive the code that made it: a browser tab holds it across a deployment, a queue holds it through one. Change arguments compatibly. Adding a nullable or defaulted argument is safe. Removing, renaming or requiring one takes two releases.
 
-## Events
+## Workers
 
-An event handler is a feature like any other. The message that triggers it carries a link:
+A worker is a feature like any other. The message or schedule that triggers it carries a link:
 
 ```csharp
 var jsonOptions = features.ConfigureJson(new JsonSerializerOptions());
@@ -149,22 +161,23 @@ foreach (var message in sqsEvent.Records)
 }
 ```
 
-Nobody waits for an event handler's answer, but every feature returns a result. A handler with nothing to say returns `Nil.Value`, and its invocation logs its outcome as `Nil`:
+Nobody waits for a worker's answer, so its result is always `Nil`. Its invocation still logs whether it succeeded or failed. Anything more, such as how many records it closed or that the employee was unknown, goes in a log line the worker writes itself:
 
 ```csharp
-public class HandleEmployeeLeft(IPayroll payroll) : Feature<HandleEmployeeLeft, HandleEmployeeLeft.Args, Nil>
+public class HandleEmployeeLeft(IPayroll payroll, ILogger<HandleEmployeeLeft> logger) : Worker<HandleEmployeeLeft, HandleEmployeeLeft.Args>
 {
     public record Args(string EmployeeId) : Link<HandleEmployeeLeft, Nil>;
 
     public override async Task<Nil> Invoke(Args args, CancellationToken cancellationToken)
     {
-        await payroll.Close(args.EmployeeId, cancellationToken);
+        var closed = await payroll.Close(args.EmployeeId, cancellationToken);
+        logger.LogInformation("Closed {Count} payroll records for {EmployeeId}", closed, args.EmployeeId);
         return Nil.Value;
     }
 }
 ```
 
-Queues deliver each message at least once, so a handler may run twice for one event. The message id goes in as the idempotency key, and the handler reads it from `Invocation.IdempotencyKey` to recognise a redelivery. What a repeat means belongs to the handler: firing someone who has already left can simply return a case that says so.
+Queues deliver each message at least once, so a worker may run twice for one event. The message id goes in as the idempotency key, and the worker reads it from `Invocation.IdempotencyKey` to recognise a redelivery. What a repeat means belongs to the worker: closing payroll for someone already closed can simply do nothing.
 
 ## What every invocation records
 

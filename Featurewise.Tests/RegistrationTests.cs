@@ -51,6 +51,30 @@ public class RegistrationTests
     }
 
     [Fact]
+    public void OnlyAQueryIsAQuery()
+    {
+        using var features = new Features("hr")
+            .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
+            .RegisterFeature<Fire, FireAuthorization>()
+            .RegisterFeature<HandleEmployeeLeft, AnySystemCaller<HandleEmployeeLeft.Args>>();
+
+        Assert.True(features.IsQuery("hr/review-employee"));
+        Assert.False(features.IsQuery("hr/Fire"));
+        Assert.False(features.IsQuery("hr/HandleEmployeeLeft"));
+        Assert.False(features.IsQuery("review-employee"));
+        Assert.False(features.IsQuery("payroll/review-employee"));
+        Assert.False(features.IsQuery("hr/Nothing"));
+    }
+
+    [Fact]
+    public void AQueryWhoseLinksAloneAreRegisteredIsAQuery()
+    {
+        using var features = new Features("hr").RegisterLinksTo<EmployeeSearch>();
+
+        Assert.True(features.IsQuery("hr/EmployeeSearch"));
+    }
+
+    [Fact]
     public async Task AFeatureCanBeRegisteredBeforeOrAfterItsLinks()
     {
         await using var features = new Features("hr");

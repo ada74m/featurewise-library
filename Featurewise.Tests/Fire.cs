@@ -3,7 +3,7 @@
 namespace Featurewise.Tests;
 
 // Fires anyone except "nobody", who isn't found, so tests can see a result with cases.
-public class Fire(ILogger<Fire> logger) : Feature<Fire, Fire.Args, Fire.Result>
+public class Fire(ILogger<Fire> logger) : Command<Fire, Fire.Args, Fire.Result>
 {
     public const string Nobody = "nobody";
 

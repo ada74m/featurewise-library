@@ -21,7 +21,7 @@ namespace Featurewise;
 /// </remarks>
 /// <example>
 /// <code>
-/// await features.Invoke(new SendReminders.Args(), SystemCaller.For("nightly-reminders"), stoppingToken);
+/// await features.Invoke(new HandleRemindersDue.Args(), SystemCaller.For("nightly-reminders"), stoppingToken);
 /// </code>
 /// </example>
 public static class SystemCaller

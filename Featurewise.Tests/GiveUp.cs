@@ -1,7 +1,7 @@
 ﻿namespace Featurewise.Tests;
 
 // Throws OperationCanceledException without its caller cancelling, as a timeout of its own would.
-public class GiveUp : Feature<GiveUp, GiveUp.Args, bool>
+public class GiveUp : Command<GiveUp, GiveUp.Args, bool>
 {
     public record Args : Link<GiveUp, bool>;
 

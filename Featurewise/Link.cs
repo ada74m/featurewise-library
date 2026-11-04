@@ -110,7 +110,7 @@ public abstract record Link<TResult> : Link
 
 /// <summary>
 /// A link to the feature <typeparamref name="TFeature"/>. Each feature's arguments type derives from
-/// this; see <see cref="Feature{TFeature, TArgs, TResult}"/> for an example.
+/// this; see <see cref="Command{TFeature, TArgs, TResult}"/> for an example.
 /// </summary>
 /// <typeparam name="TFeature">The feature the link would invoke.</typeparam>
 /// <typeparam name="TResult">The type that invoking the link produces.</typeparam>

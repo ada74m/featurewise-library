@@ -1,6 +1,6 @@
 ﻿namespace Featurewise.Tests;
 
-public class Probe : Feature<Probe, Probe.Args, ScopeProbe>
+public class Probe : Query<Probe, Probe.Args, ScopeProbe>
 {
     public record Args : Link<Probe, ScopeProbe>;
 

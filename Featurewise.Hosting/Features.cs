@@ -163,7 +163,7 @@ public class Features : IDisposable, IAsyncDisposable
     /// <summary>
     /// Registers a feature in a standalone <see cref="Features"/>, and the rule that says who may invoke it.
     /// </summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <typeparam name="TRule">
     /// An authorization handler for <see cref="InvokeRequirement"/> whose resource is the feature's
     /// arguments type, or a base of it; see <see cref="FeaturesBuilder.RegisterFeature{TFeature, TRule}"/>.
@@ -175,8 +175,7 @@ public class Features : IDisposable, IAsyncDisposable
     /// feature fails the first invocation.
     /// </remarks>
     /// <exception cref="ArgumentException">
-    /// <typeparamref name="TFeature"/> doesn't derive from <see cref="Feature{TFeature, TArgs, TResult}"/>
-    /// with itself as the first type argument; a rule isn't an
+    /// <typeparamref name="TFeature"/> doesn't name itself as its family's first type argument; a rule isn't an
     /// <see cref="AuthorizationHandler{TRequirement, TResource}"/> for <see cref="InvokeRequirement"/>
     /// and the feature's arguments; or the feature has <see cref="AllowAnonymousAttribute"/>, which
     /// Featurewise doesn't honour: register <see cref="AnyCaller{TArgs}"/> instead.
@@ -196,7 +195,7 @@ public class Features : IDisposable, IAsyncDisposable
     /// <summary>
     /// Registers a feature in a standalone <see cref="Features"/>, and two rules that each say who may invoke it.
     /// </summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
     /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
     /// <returns>This instance, so that calls can be chained.</returns>
@@ -214,7 +213,7 @@ public class Features : IDisposable, IAsyncDisposable
     /// <summary>
     /// Registers a feature in a standalone <see cref="Features"/>, and three rules that each say who may invoke it.
     /// </summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
     /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
     /// <typeparam name="TRule3">Another rule for the feature.</typeparam>
@@ -235,12 +234,11 @@ public class Features : IDisposable, IAsyncDisposable
     /// Registers a feature's links without the feature in a standalone <see cref="Features"/>, so that
     /// links to it can be serialized here and invoked elsewhere.
     /// </summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <returns>This instance, so that calls can be chained.</returns>
     /// <remarks>See <see cref="FeaturesBuilder.RegisterLinksTo{TFeature}"/>.</remarks>
     /// <exception cref="ArgumentException">
-    /// <typeparamref name="TFeature"/> doesn't derive from <see cref="Feature{TFeature, TArgs, TResult}"/>
-    /// with itself as the first type argument.
+    /// <typeparamref name="TFeature"/> doesn't name itself as its family's first type argument.
     /// </exception>
     /// <exception cref="InvalidOperationException">
     /// Another registered feature has the same name, registration is closed, or this
@@ -395,15 +393,43 @@ public class Features : IDisposable, IAsyncDisposable
     public bool IsInvocable(string feature)
     {
         ArgumentNullException.ThrowIfNull(feature);
-
-        var prefix = Service + "/";
-        if (!feature.StartsWith(prefix, StringComparison.Ordinal))
-            return false;
-
-        var argsType = _registry.ArgsTypeNamed(feature[prefix.Length..]);
-        var featureType = argsType is null ? null : GenericArgumentsOf(argsType, typeof(Link<,>))?[0];
+        var featureType = FeatureTypeNamed(feature);
         return featureType is not null
             && Provider.GetRequiredService<IServiceProviderIsKeyedService>().IsKeyedService(featureType, FeatureKey);
+    }
+
+    // The feature, or the links, registered under a name qualified by this service, or null if nothing is.
+    private Type? FeatureTypeNamed(string feature)
+    {
+        var prefix = Service + "/";
+        if (!feature.StartsWith(prefix, StringComparison.Ordinal))
+            return null;
+
+        var argsType = _registry.ArgsTypeNamed(feature[prefix.Length..]);
+        return argsType is null ? null : GenericArgumentsOf(argsType, typeof(Link<,>))?[0];
+    }
+
+    /// <summary>
+    /// Whether the feature with the given name, qualified by the service as in a link's <c>$feature</c>,
+    /// such as <c>hr/EmployeeSearch</c>, is a <see cref="Query{TFeature, TArgs, TResult}"/>.
+    /// </summary>
+    /// <param name="feature">The feature's name, qualified by the service.</param>
+    /// <returns>
+    /// <see langword="true"/> if the feature, or only its links, is registered and is a query;
+    /// <see langword="false"/> if it's a command or worker, if nothing by that name is registered, or if
+    /// the name qualifies it with another service.
+    /// </returns>
+    /// <remarks>
+    /// A query is safe to repeat, so an entrypoint asks this before invoking a feature in a way that may
+    /// repeat it, such as by GET. To find out whether this <see cref="Features"/> invokes the feature at
+    /// all, ask <see cref="IsInvocable"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="feature"/> is <see langword="null"/>.</exception>
+    public bool IsQuery(string feature)
+    {
+        ArgumentNullException.ThrowIfNull(feature);
+        var featureType = FeatureTypeNamed(feature);
+        return featureType is not null && GenericArgumentsOf(featureType, typeof(Query<,,>)) is not null;
     }
 
     /// <summary>

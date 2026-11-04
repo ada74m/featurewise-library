@@ -1,7 +1,7 @@
 ﻿namespace Featurewise.Tests;
 
 // Has a result with a sealed case, so tests can see how sealed cases are serialized.
-public class TossCoin : Feature<TossCoin, TossCoin.Args, TossCoin.Result>
+public class TossCoin : Command<TossCoin, TossCoin.Args, TossCoin.Result>
 {
     public record Args : Link<TossCoin, Result>;
 

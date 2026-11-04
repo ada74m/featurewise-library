@@ -56,7 +56,7 @@ public sealed class FeaturesBuilder
     internal FeatureRegistry Registry { get; }
 
     /// <summary>Registers a feature, and the rule that says who may invoke it.</summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <typeparam name="TRule">
     /// An authorization handler for <see cref="InvokeRequirement"/> whose resource is the feature's
     /// arguments type, or a base of it: usually a rule nested in the feature, or one of
@@ -84,8 +84,7 @@ public sealed class FeaturesBuilder
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentException">
-    /// <typeparamref name="TFeature"/> doesn't derive from <see cref="Feature{TFeature, TArgs, TResult}"/>
-    /// with itself as the first type argument; a rule isn't an
+    /// <typeparamref name="TFeature"/> doesn't name itself as its family's first type argument; a rule isn't an
     /// <see cref="AuthorizationHandler{TRequirement, TResource}"/> for <see cref="InvokeRequirement"/>
     /// and the feature's arguments; or the feature has <see cref="AllowAnonymousAttribute"/>, which
     /// Featurewise doesn't honour: register <see cref="AnyCaller{TArgs}"/> instead.
@@ -99,7 +98,7 @@ public sealed class FeaturesBuilder
         AddFeature<TFeature>(typeof(TRule));
 
     /// <summary>Registers a feature, and two rules that each say who may invoke it.</summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
     /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
     /// <returns>This builder, so that calls can be chained.</returns>
@@ -112,7 +111,7 @@ public sealed class FeaturesBuilder
         AddFeature<TFeature>(typeof(TRule1), typeof(TRule2));
 
     /// <summary>Registers a feature, and three rules that each say who may invoke it.</summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
     /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
     /// <typeparam name="TRule3">Another rule for the feature.</typeparam>
@@ -165,7 +164,7 @@ public sealed class FeaturesBuilder
     /// Registers a feature's links without the feature, so that links to it can be serialized here
     /// and invoked elsewhere.
     /// </summary>
-    /// <typeparam name="TFeature">The feature, which derives from <see cref="Feature{TFeature, TArgs, TResult}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
     /// <returns>This builder, so that calls can be chained.</returns>
     /// <remarks>
     /// <para>
@@ -181,8 +180,7 @@ public sealed class FeaturesBuilder
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentException">
-    /// <typeparamref name="TFeature"/> doesn't derive from <see cref="Feature{TFeature, TArgs, TResult}"/>
-    /// with itself as the first type argument.
+    /// <typeparamref name="TFeature"/> doesn't name itself as its family's first type argument.
     /// </exception>
     /// <exception cref="InvalidOperationException">Another registered feature has the same name.</exception>
     public FeaturesBuilder RegisterLinksTo<TFeature>() where TFeature : class
@@ -191,16 +189,16 @@ public sealed class FeaturesBuilder
         return this;
     }
 
-    // The type arguments TFeature passes to Feature<TFeature, TArgs, TResult>.
+    // The type arguments TFeature passes, through its family, to Feature<TFeature, TArgs, TResult>.
     private static Type[] FeatureTypeArgumentsOf<TFeature>()
     {
         // The compiler can't stop a feature naming another feature as itself,
-        // e.g. Promote : Feature<Fire, Fire.Args, Fire.Result>, so check here.
+        // e.g. Promote : Command<Fire, Fire.Args, Fire.Result>, so check here.
         var featureTypeArguments = Features.GenericArgumentsOf(typeof(TFeature), typeof(Feature<,,>));
         var declaredSelf = featureTypeArguments?[0];
         if (declaredSelf != typeof(TFeature))
             throw new ArgumentException(
-                $"{typeof(TFeature).Name} must derive from Feature<{typeof(TFeature).Name}, ...>, not Feature<{declaredSelf?.Name}, ...>");
+                $"{typeof(TFeature).Name} must name itself as its feature, not {declaredSelf?.Name}");
 
         return featureTypeArguments!;
     }

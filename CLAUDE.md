@@ -16,7 +16,7 @@ A change is done when the build is warning-free (doc comments included) and the 
 
 ## What this is
 
-Featurewise is a library (`Featurewise/` and `Featurewise.Hosting/`) for structuring a service as a set of **features** (commands, queries, event handlers) invoked through **links** (records that name a feature and carry its arguments). `README.md` is the user-facing explanation of the model and its rules; read it before changing behaviour. The XML doc comments in the library are the detailed spec of each API's behaviour and are kept in step with the code (`GenerateDocumentationFile` is on, so a public member without one produces a build warning).
+Featurewise is a library (`Featurewise/` and `Featurewise.Hosting/`) for structuring a service as a set of **features** (queries, commands and workers) invoked through **links** (records that name a feature and carry its arguments). `README.md` is the user-facing explanation of the model and its rules; read it before changing behaviour. The XML doc comments in the library are the detailed spec of each API's behaviour and are kept in step with the code (`GenerateDocumentationFile` is on, so a public member without one produces a build warning).
 
 The design rules the code enforces, which changes must preserve (README "Boundaries"):
 - **Features don't invoke features.** A feature that leads to another returns a link to it; shared logic goes in a service.
@@ -29,15 +29,15 @@ Settled decisions, not to be reopened: named authorization policies were rejecte
 ## Conventions
 
 - One type per file, except generic arities of one name, which share a file (`Link.cs`, `IFeature.cs`).
-- Feature names: commands are verb phrases, queries are noun phrases, event handlers are `Handle` plus the event. In the tests, `EmployeeSearch` is a query, `Remind` a command and `HandleEmployeeLeft` an event handler.
+- Feature names: commands are verb phrases, queries are noun phrases, workers are `Handle` plus what triggers them. In the tests, `EmployeeSearch` is a query, `Remind` a command and `HandleEmployeeLeft` a worker.
 - Prose (README, XML docs) is in classic style: direct, no metadiscourse, no hedging.
 
 ## Architecture
 
-`Featurewise/` (the `Featurewise.Core` package) holds what a service's core is written with: `Feature`, `IFeature`, the `Link` hierarchy, `Invocation`, `LinkPermissions`, `InvokeRequirement`, `SystemCaller`, the `Any*Caller` rules, `FeatureNameAttribute` and `Nil`. `Featurewise.Hosting/` holds what entrypoints use: `Features`, `FeaturesBuilder`, `FeatureRegistry`, `AddFeatures` and `InvocationDeniedException`. Core must not depend on Hosting, so a core that references only `Featurewise.Core` can't invoke features. Hosting creates `Invocation` and `LinkPermissions` through Core's internals (`InternalsVisibleTo`); doc comments in Core name Hosting's types with `<c>`, since a `cref` can't reach them.
+`Featurewise/` (the `Featurewise.Core` package) holds what a service's core is written with: `Feature`, `Query`, `Command`, `Worker`, `IFeature`, the `Link` hierarchy, `Invocation`, `LinkPermissions`, `InvokeRequirement`, `SystemCaller`, the `Any*Caller` rules, `FeatureNameAttribute` and `Nil`. `Featurewise.Hosting/` holds what entrypoints use: `Features`, `FeaturesBuilder`, `FeatureRegistry`, `AddFeatures` and `InvocationDeniedException`. Core must not depend on Hosting, so a core that references only `Featurewise.Core` can't invoke features. Hosting creates `Invocation` and `LinkPermissions` through Core's internals (`InternalsVisibleTo`); doc comments in Core name Hosting's types with `<c>`, since a `cref` can't reach them.
 
 - **`Link` hierarchy** (`Link.cs`): `Link` → `Link<TResult>` → `Link<TFeature, TResult>`, with `private protected` constructors so every link must derive from the last and therefore names exactly one feature. A feature's `Args` record is its link. `CausedBy` is stamped from `Activity.Current` at construction, excluded from equality, and cleared on deserialization unless the JSON supplied it.
-- **`Feature<TFeature, TArgs, TResult>`** (`Feature.cs`) implements the non-generic `IFeature` so `Features` can invoke any feature from a plain `Link`. `TFeature` must be the deriving class itself; the compiler can't enforce that, so `FeaturesBuilder.RegisterFeature` checks it by reflection.
+- **`Feature<TFeature, TArgs, TResult>`** (`Feature.cs`) implements the non-generic `IFeature` so `Features` can invoke any feature from a plain `Link`. Its constructor is `private protected`, so features derive from one of chapter 1's three families instead: `Query` (changes nothing, safe to repeat), `Command` (changes state, someone may be waiting) or `Worker<TFeature, TArgs>` (nobody waits, result fixed as `Nil`; it logs its own outcome). `Features.IsQuery(name)` exposes the family to entrypoints, from the registry, so links-only registrations count. `TFeature` must be the deriving class itself; the compiler can't enforce that, so `FeaturesBuilder.RegisterFeature` checks it by reflection.
 - **`Features`** (`Features.cs`) is the single invocation pipeline, in two modes sharing the same `Invoke`:
   - *Standalone*: `new Features(service)` owns a `FeaturesBuilder` and a lazily built `ServiceProvider` (`ValidateScopes`/`ValidateOnBuild`). `Build()` or the first `Invoke` builds it and closes registration.
   - *Hosted*: `services.AddFeatures(service, ...)` (`FeatureServiceCollectionExtensions.cs`) registers into the host's container; `Features` is constructed internally with the host's provider.
