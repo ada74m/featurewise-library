@@ -195,7 +195,7 @@ Each invocation logs its start, with its id, its cause and any idempotency key; 
 
 Featurewise comes as two packages, published together at one version as previews to GitHub Packages:
 
-- `Featurewise.Core` is what a service's core is written with: `Feature`, links, `Invocation`, `LinkPermissions`, `InvokeRequirement`, `SystemCaller` and the ready-made rules.
+- `Featurewise.Core` is what a service's core is written with: `Query`, `Command` and `Worker`, links, `Invocation`, `LinkPermissions`, `InvokeRequirement`, `SystemCaller` and the ready-made rules.
 - `Featurewise.Hosting` is what its entrypoints invoke features with: `Features`, its registration methods, `AddFeatures` and `InvocationDeniedException`. It depends on exactly the same version of `Featurewise.Core`.
 
 A core project that references only `Featurewise.Core` can't build a container or invoke a feature, so the compiler keeps features from invoking features. Both packages use the namespace `Featurewise`. Add the feed, with a GitHub token that can read packages, then the package each project needs:
