@@ -7,7 +7,7 @@
         <VersionSuffix Condition="'$(VersionSuffix)' == ''">dev</VersionSuffix>
         <Authors>Adam Rambridge</Authors>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <RepositoryUrl>https://github.com/ada74m/featurewise</RepositoryUrl>
+        <RepositoryUrl>https://github.com/ada74m/featurewise-library</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
         <!-- Symbols travel in the assembly, since GitHub Packages takes no symbol packages; Source Link
