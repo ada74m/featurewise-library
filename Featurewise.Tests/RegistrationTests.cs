@@ -87,17 +87,25 @@ public class RegistrationTests
     }
 
     [Fact]
-    public void RegisteringLinksToAFeatureThatNamesAnotherFeatureAsItselfThrows()
+    public void RegisteringLinksToAFeatureWhoseArgumentsLinkToAnotherFeatureThrows()
     {
         using var features = new Features("hr");
         Assert.Throws<ArgumentException>(() => features.RegisterLinksTo<Promote>());
     }
 
     [Fact]
-    public void RegisteringAFeatureThatNamesAnotherFeatureAsItselfThrows()
+    public void RegisteringAFeatureWhoseArgumentsLinkToAnotherFeatureThrows()
     {
         using var features = new Features("hr");
         Assert.Throws<ArgumentException>(() => features.RegisterFeature<Promote, AnyCaller<Fire.Args>>());
+    }
+
+    [Fact]
+    public void RegisteringAClassThatIsntAFeatureThrows()
+    {
+        using var features = new Features("hr");
+        var thrown = Assert.Throws<ArgumentException>(() => features.RegisterLinksTo<SentReminders>());
+        Assert.Contains("isn't a feature", thrown.Message);
     }
 
     [Fact]

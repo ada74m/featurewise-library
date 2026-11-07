@@ -2,7 +2,7 @@
 
 // Sends a reminder once per request, recognising redeliveries by their idempotency key, as a
 // repeatable command or worker would.
-public class Remind(SentReminders sent, Invocation invocation) : Command<Remind, Remind.Args, Remind.Result>
+public class Remind(SentReminders sent, Invocation invocation) : Command<Remind.Args, Remind.Result>
 {
     public record Args(string EmployeeId) : Link<Remind, Result>;
 

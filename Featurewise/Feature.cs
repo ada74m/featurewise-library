@@ -2,16 +2,13 @@
 
 /// <summary>
 /// The base of every feature. A feature derives from one of its three families instead:
-/// <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or
-/// <see cref="Worker{TFeature, TArgs}"/>.
+/// <see cref="Query{TArgs, TResult}"/>, <see cref="Command{TArgs, TResult}"/> or
+/// <see cref="Worker{TArgs}"/>.
 /// </summary>
-/// <typeparam name="TFeature">
-/// The deriving class itself. The compiler can't enforce this, so
-/// <c>Features.RegisterFeature</c> rejects a feature that names any other class here.
-/// </typeparam>
 /// <typeparam name="TArgs">
 /// The feature's arguments, which must be a link to this feature. By convention, a record named
-/// <c>Args</c> nested in the feature.
+/// <c>Args</c> nested in the feature. The compiler can't check that it links to this feature rather
+/// than another, so <c>Features.RegisterFeature</c> rejects a feature whose arguments link elsewhere.
 /// </typeparam>
 /// <typeparam name="TResult">
 /// The type that invoking the feature produces. If its outcomes differ in kind, make it a result with
@@ -42,9 +39,8 @@
 /// it; logic that several features share belongs in a service they all depend on.
 /// </para>
 /// </remarks>
-public abstract class Feature<TFeature, TArgs, TResult> : IFeature<TResult>
-    where TFeature : Feature<TFeature, TArgs, TResult>
-    where TArgs : Link<TFeature, TResult>
+public abstract class Feature<TArgs, TResult> : IFeature<TResult>
+    where TArgs : Link<TResult>
 {
     /// <summary>Does the feature's work.</summary>
     /// <param name="args">The arguments to invoke the feature with.</param>

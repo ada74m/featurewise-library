@@ -5,8 +5,8 @@
 /// invokes every feature.
 /// </summary>
 /// <remarks>
-/// Write features by deriving from <see cref="Query{TFeature, TArgs, TResult}"/>,
-/// <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>, which
+/// Write features by deriving from <see cref="Query{TArgs, TResult}"/>,
+/// <see cref="Command{TArgs, TResult}"/> or <see cref="Worker{TArgs}"/>, which
 /// implement this interface.
 /// </remarks>
 public interface IFeature
@@ -26,7 +26,7 @@ public interface IFeature
 /// <remarks>
 /// <see cref="Link{TFeature, TResult}"/> requires its feature to implement this, so that a link can't
 /// promise a result its feature doesn't produce. Write features by deriving from
-/// <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or
-/// <see cref="Worker{TFeature, TArgs}"/>, which implement this interface.
+/// <see cref="Query{TArgs, TResult}"/>, <see cref="Command{TArgs, TResult}"/> or
+/// <see cref="Worker{TArgs}"/>, which implement this interface.
 /// </remarks>
 public interface IFeature<TResult> : IFeature;

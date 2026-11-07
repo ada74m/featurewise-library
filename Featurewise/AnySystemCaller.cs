@@ -10,7 +10,7 @@ namespace Featurewise;
 /// <remarks>
 /// <para>
 /// Register a feature with it when only the service's own jobs and workers should invoke the feature,
-/// as with a <see cref="Worker{TFeature, TArgs}"/>:
+/// as with a <see cref="Worker{TArgs}"/>:
 /// <code>
 /// features.RegisterFeature&lt;HandleRemindersDue, AnySystemCaller&lt;HandleRemindersDue.Args&gt;&gt;();
 /// </code>

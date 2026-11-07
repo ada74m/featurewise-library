@@ -1,7 +1,7 @@
 ﻿namespace Featurewise.Tests;
 
 // Returns what it knows about its invocation, so tests can see Invocation filled in.
-public class DescribeInvocation(Invocation invocation) : Query<DescribeInvocation, DescribeInvocation.Args, DescribeInvocation.Result>
+public class DescribeInvocation(Invocation invocation) : Query<DescribeInvocation.Args, DescribeInvocation.Result>
 {
     public record Args : Link<DescribeInvocation, Result>;
 

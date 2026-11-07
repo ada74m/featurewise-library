@@ -56,7 +56,7 @@ public sealed class FeaturesBuilder
     internal FeatureRegistry Registry { get; }
 
     /// <summary>Registers a feature, and the rule that says who may invoke it.</summary>
-    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TArgs, TResult}"/>, <see cref="Command{TArgs, TResult}"/> or <see cref="Worker{TArgs}"/>.</typeparam>
     /// <typeparam name="TRule">
     /// An authorization handler for <see cref="InvokeRequirement"/> whose resource is the feature's
     /// arguments type, or a base of it: usually a rule nested in the feature, or one of
@@ -84,7 +84,7 @@ public sealed class FeaturesBuilder
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentException">
-    /// <typeparamref name="TFeature"/> doesn't name itself as its family's first type argument; a rule isn't an
+    /// <typeparamref name="TFeature"/> isn't a feature, or its arguments aren't a link to it; a rule isn't an
     /// <see cref="AuthorizationHandler{TRequirement, TResource}"/> for <see cref="InvokeRequirement"/>
     /// and the feature's arguments; or the feature has <see cref="AllowAnonymousAttribute"/>, which
     /// Featurewise doesn't honour: register <see cref="AnyCaller{TArgs}"/> instead.
@@ -98,7 +98,7 @@ public sealed class FeaturesBuilder
         AddFeature<TFeature>(typeof(TRule));
 
     /// <summary>Registers a feature, and two rules that each say who may invoke it.</summary>
-    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TArgs, TResult}"/>, <see cref="Command{TArgs, TResult}"/> or <see cref="Worker{TArgs}"/>.</typeparam>
     /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
     /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
     /// <returns>This builder, so that calls can be chained.</returns>
@@ -111,7 +111,7 @@ public sealed class FeaturesBuilder
         AddFeature<TFeature>(typeof(TRule1), typeof(TRule2));
 
     /// <summary>Registers a feature, and three rules that each say who may invoke it.</summary>
-    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TArgs, TResult}"/>, <see cref="Command{TArgs, TResult}"/> or <see cref="Worker{TArgs}"/>.</typeparam>
     /// <typeparam name="TRule1">A rule for the feature; see <see cref="RegisterFeature{TFeature, TRule}"/>.</typeparam>
     /// <typeparam name="TRule2">Another rule for the feature.</typeparam>
     /// <typeparam name="TRule3">Another rule for the feature.</typeparam>
@@ -131,7 +131,7 @@ public sealed class FeaturesBuilder
     private FeaturesBuilder AddFeature<TFeature>(params Type[] rules) where TFeature : class
     {
         var featureTypeArguments = FeatureTypeArgumentsOf<TFeature>();
-        var argsType = featureTypeArguments[1];
+        var argsType = featureTypeArguments[0];
 
         // Elsewhere in ASP.NET, [AllowAnonymous] opens an endpoint to everyone. Featurewise opens a
         // feature only through its rules, so a feature with the attribute wouldn't be what it seems.
@@ -164,7 +164,7 @@ public sealed class FeaturesBuilder
     /// Registers a feature's links without the feature, so that links to it can be serialized here
     /// and invoked elsewhere.
     /// </summary>
-    /// <typeparam name="TFeature">The feature: a <see cref="Query{TFeature, TArgs, TResult}"/>, <see cref="Command{TFeature, TArgs, TResult}"/> or <see cref="Worker{TFeature, TArgs}"/>.</typeparam>
+    /// <typeparam name="TFeature">The feature: a <see cref="Query{TArgs, TResult}"/>, <see cref="Command{TArgs, TResult}"/> or <see cref="Worker{TArgs}"/>.</typeparam>
     /// <returns>This builder, so that calls can be chained.</returns>
     /// <remarks>
     /// <para>
@@ -180,7 +180,7 @@ public sealed class FeaturesBuilder
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentException">
-    /// <typeparamref name="TFeature"/> doesn't name itself as its family's first type argument.
+    /// <typeparamref name="TFeature"/> isn't a feature, or its arguments aren't a link to it.
     /// </exception>
     /// <exception cref="InvalidOperationException">Another registered feature has the same name.</exception>
     public FeaturesBuilder RegisterLinksTo<TFeature>() where TFeature : class
@@ -189,24 +189,28 @@ public sealed class FeaturesBuilder
         return this;
     }
 
-    // The type arguments TFeature passes, through its family, to Feature<TFeature, TArgs, TResult>.
+    // The type arguments TFeature passes, through its family, to Feature<TArgs, TResult>.
     private static Type[] FeatureTypeArgumentsOf<TFeature>()
     {
-        // The compiler can't stop a feature naming another feature as itself,
-        // e.g. Promote : Command<Fire, Fire.Args, Fire.Result>, so check here.
-        var featureTypeArguments = Features.GenericArgumentsOf(typeof(TFeature), typeof(Feature<,,>));
-        var declaredSelf = featureTypeArguments?[0];
-        if (declaredSelf != typeof(TFeature))
-            throw new ArgumentException(
-                $"{typeof(TFeature).Name} must name itself as its feature, not {declaredSelf?.Name}");
+        var featureTypeArguments = Features.GenericArgumentsOf(typeof(TFeature), typeof(Feature<,>))
+            ?? throw new ArgumentException(
+                $"{typeof(TFeature).Name} isn't a feature: a feature derives from Query, Command or Worker");
 
-        return featureTypeArguments!;
+        // The compiler can't stop a feature taking another feature's arguments,
+        // e.g. Promote : Command<Fire.Args, Fire.Result>, so check here.
+        var argsType = featureTypeArguments[0];
+        var linkedFeature = Features.GenericArgumentsOf(argsType, typeof(Link<,>))![0];
+        if (linkedFeature != typeof(TFeature))
+            throw new ArgumentException(
+                $"{typeof(TFeature).Name}'s arguments, {NameOf(argsType)}, must be a link to {typeof(TFeature).Name}, not {NameOf(linkedFeature)}");
+
+        return featureTypeArguments;
     }
 
     private void AddToRegistry<TFeature>(Type[] featureTypeArguments)
     {
         var name = typeof(TFeature).GetCustomAttribute<FeatureNameAttribute>()?.Name ?? typeof(TFeature).Name;
-        Registry.Add(featureTypeArguments[1], name, featureTypeArguments[2]);
+        Registry.Add(featureTypeArguments[0], name, featureTypeArguments[1]);
     }
 
     // A type's name as C# writes it, such as Fire.Args or AnySignedInCaller<Fire.Args>.

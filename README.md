@@ -7,7 +7,7 @@ The call is a value. A **link** names a feature and carries the arguments to inv
 ## A feature and its link
 
 ```csharp
-public class Fire(IEmployeeStore employees) : Command<Fire, Fire.Args, Fire.Result>
+public class Fire(IEmployeeStore employees) : Command<Fire.Args, Fire.Result>
 {
     public record Args(string EmployeeId) : Link<Fire, Result>;
 
@@ -31,7 +31,7 @@ public class Fire(IEmployeeStore employees) : Command<Fire, Fire.Args, Fire.Resu
 }
 ```
 
-`Fire.Args` is the link. It derives from `Link<Fire, Result>`, so its type names the feature it invokes and the result it produces. A link type names exactly one feature, and a feature accepts only links to itself: the compiler rejects most mismatches, and `RegisterFeature` rejects the rest.
+`Fire.Args` is the link. It derives from `Link<Fire, Result>`, so its type names the feature it invokes and the result it produces. A link type names exactly one feature, and a feature accepts only links to itself: `RegisterFeature` rejects a feature whose arguments link to another.
 
 `Fire.Result` has cases. An outcome the feature expects, such as an employee who isn't there, is a case it returns. Exceptions are left for what nobody expected: the database is down, the code is wrong.
 
@@ -41,9 +41,9 @@ A feature takes its dependencies through its constructor, as any service does. I
 
 Every feature belongs to one of three families, and derives from its base class:
 
-- **`Query<TFeature, TArgs, TResult>`** answers a question and changes nothing, such as `EmployeeSearch`. It's safe to repeat.
-- **`Command<TFeature, TArgs, TResult>`** changes state for a caller who may be waiting to know how it went, such as `Fire`.
-- **`Worker<TFeature, TArgs>`** changes state with nobody waiting, such as `HandleEmployeeLeft`. Its result is always `Nil`.
+- **`Query<TArgs, TResult>`** answers a question and changes nothing, such as `EmployeeSearch`. It's safe to repeat.
+- **`Command<TArgs, TResult>`** changes state for a caller who may be waiting to know how it went, such as `Fire`.
+- **`Worker<TArgs>`** changes state with nobody waiting, such as `HandleEmployeeLeft`. Its result is always `Nil`.
 
 Anything someone might wait for is a command, even when a job sometimes invokes it. A worker is a feature nobody ever waits for.
 
@@ -101,7 +101,7 @@ Every invocation has a caller, and every invocation is refused unless a rule app
 A rule is an authorization handler for `InvokeRequirement`, with the feature's arguments as the resource. It sees the caller and the arguments, and can load whatever else it needs. A rule that belongs to one feature lives inside it, beside its `Args` and `Result`:
 
 ```csharp
-public class Fire(IEmployeeStore employees) : Command<Fire, Fire.Args, Fire.Result>
+public class Fire(IEmployeeStore employees) : Command<Fire.Args, Fire.Result>
 {
     ...
 
@@ -164,7 +164,7 @@ foreach (var message in sqsEvent.Records)
 Nobody waits for a worker's answer, so its result is always `Nil`. Its invocation still logs whether it succeeded or failed. Anything more, such as how many records it closed or that the employee was unknown, goes in a log line the worker writes itself:
 
 ```csharp
-public class HandleEmployeeLeft(IPayroll payroll, ILogger<HandleEmployeeLeft> logger) : Worker<HandleEmployeeLeft, HandleEmployeeLeft.Args>
+public class HandleEmployeeLeft(IPayroll payroll, ILogger<HandleEmployeeLeft> logger) : Worker<HandleEmployeeLeft.Args>
 {
     public record Args(string EmployeeId) : Link<HandleEmployeeLeft, Nil>;
 

@@ -3,7 +3,7 @@
 namespace Featurewise;
 
 /// <summary>
-/// The result of a feature that has nothing to return, such as every <see cref="Worker{TFeature, TArgs}"/>,
+/// The result of a feature that has nothing to return, such as every <see cref="Worker{TArgs}"/>,
 /// whose caller doesn't wait for an answer.
 /// </summary>
 /// <remarks>

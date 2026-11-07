@@ -1,7 +1,7 @@
 ﻿namespace Featurewise.Tests;
 
 // Depends on Fire directly, which Features must reject.
-public class Dismiss(Fire fire) : Command<Dismiss, Dismiss.Args, Fire.Result>
+public class Dismiss(Fire fire) : Command<Dismiss.Args, Fire.Result>
 {
     public record Args(string EmployeeId) : Link<Dismiss, Fire.Result>;
 
