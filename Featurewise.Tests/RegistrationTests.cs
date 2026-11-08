@@ -67,6 +67,24 @@ public class RegistrationTests
     }
 
     [Fact]
+    public void EveryRegisteredFeatureHasAFamily()
+    {
+        using var features = new Features("hr")
+            .RegisterFeature<EmployeeReview, AnyCaller<EmployeeReview.Args>>()
+            .RegisterFeature<Fire, FireAuthorization>()
+            .RegisterFeature<HandleEmployeeLeft, AnySystemCaller<HandleEmployeeLeft.Args>>()
+            .RegisterLinksTo<EmployeeSearch>();
+
+        Assert.Equal(FeatureFamily.Query, features.FamilyOf("hr/review-employee"));
+        Assert.Equal(FeatureFamily.Query, features.FamilyOf("hr/EmployeeSearch"));
+        Assert.Equal(FeatureFamily.Command, features.FamilyOf("hr/Fire"));
+        Assert.Equal(FeatureFamily.Worker, features.FamilyOf("hr/HandleEmployeeLeft"));
+        Assert.Null(features.FamilyOf("review-employee"));
+        Assert.Null(features.FamilyOf("payroll/review-employee"));
+        Assert.Null(features.FamilyOf("hr/Nothing"));
+    }
+
+    [Fact]
     public void AQueryWhoseLinksAloneAreRegisteredIsAQuery()
     {
         using var features = new Features("hr").RegisterLinksTo<EmployeeSearch>();

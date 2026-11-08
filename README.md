@@ -47,7 +47,7 @@ Every feature belongs to one of three families, and derives from its base class:
 
 Anything someone might wait for is a command, even when a job sometimes invokes it. A worker is a feature nobody ever waits for.
 
-An entrypoint asks `features.IsQuery("hr/EmployeeSearch")` before invoking a feature in a way that may repeat it: a UI backend that answers GET, a client that retries, a cache. Deriving from `Query` is a promise the compiler can't check, so a query that writes anything a stakeholder would care about is a bug for review to catch.
+An entrypoint asks `features.IsQuery("hr/EmployeeSearch")` before invoking a feature in a way that may repeat it: a UI backend that answers GET, a client that retries, a cache. And `features.FamilyOf("hr/EmployeeSearch")` gives any feature's family, which a UI backend passes on so that its UI gives queries addresses. Deriving from `Query` is a promise the compiler can't check, so a query that writes anything a stakeholder would care about is a bug for review to catch.
 
 ## Invoking links
 

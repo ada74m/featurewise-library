@@ -425,11 +425,34 @@ public class Features : IDisposable, IAsyncDisposable
     /// all, ask <see cref="IsInvocable"/>.
     /// </remarks>
     /// <exception cref="ArgumentNullException"><paramref name="feature"/> is <see langword="null"/>.</exception>
-    public bool IsQuery(string feature)
+    public bool IsQuery(string feature) => FamilyOf(feature) == FeatureFamily.Query;
+
+    /// <summary>
+    /// The family of the feature with the given name, qualified by the service as in a link's
+    /// <c>$feature</c>, such as <c>hr/EmployeeSearch</c>.
+    /// </summary>
+    /// <param name="feature">The feature's name, qualified by the service.</param>
+    /// <returns>
+    /// The feature's family if the feature, or only its links, is registered; <see langword="null"/> if
+    /// nothing by that name is registered, or if the name qualifies it with another service.
+    /// </returns>
+    /// <remarks>
+    /// An entrypoint tells its callers the family of the feature that answered, as a UI backend does in a
+    /// header, so that its UI gives a query an address and never a command. To find out whether this
+    /// <see cref="Features"/> invokes the feature at all, ask <see cref="IsInvocable"/>.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="feature"/> is <see langword="null"/>.</exception>
+    public FeatureFamily? FamilyOf(string feature)
     {
         ArgumentNullException.ThrowIfNull(feature);
         var featureType = FeatureTypeNamed(feature);
-        return featureType is not null && GenericArgumentsOf(featureType, typeof(Query<,>)) is not null;
+        if (featureType is null)
+            return null;
+        if (GenericArgumentsOf(featureType, typeof(Query<,>)) is not null)
+            return FeatureFamily.Query;
+        if (GenericArgumentsOf(featureType, typeof(Command<,>)) is not null)
+            return FeatureFamily.Command;
+        return FeatureFamily.Worker;
     }
 
     /// <summary>
