@@ -134,10 +134,10 @@ A refused invocation throws `InvocationDeniedException`, which says whether the 
 Links leave the process and come back. `ConfigureJson` sets up JSON options so they survive the trip:
 
 ```json
-{"$feature":"hr/Fire","EmployeeId":"e1","CausedBy":"00-4bf9…-00f0…-01"}
+{"$command":"hr/Fire","EmployeeId":"e1","CausedBy":"00-4bf9…-00f0…-01"}
 ```
 
-The `$feature` property names the feature, so a general endpoint can read any link as `Link` and invoke it without knowing what it is. A feature's name is its class name, or the name in its `[FeatureName]` attribute, which lets the class be renamed without breaking links already handed out. Results with cases carry a `$case` property the same way.
+The first property names the feature, so a general endpoint can read any link as `Link` and invoke it without knowing what it is. Its name says the feature's family, `$query`, `$command` or `$worker`, so whoever holds a link can tell what following it will do: a query only fetches information, and is safe to repeat, while a command changes something. A link whose property doesn't match its feature's family is refused. Links written before the family was named used `$feature`, which is still read but never written. A feature's name is its class name, or the name in its `[FeatureName]` attribute, which lets the class be renamed without breaking links already handed out. Results with cases carry a `$case` property the same way.
 
 The feature's name is qualified by its service, given when `Features` is created: `new Features("hr")`, or `AddFeatures("hr", …)` in a host. One client, such as a UI that combines several services, can hold links from all of them and send each back to the service named before the slash. A service reads only its own links: one that names no service or another throws a `JsonException`, so a link sent to the wrong service is refused instead of invoked as one of its features. Like a feature's name, a service's id is in every link handed out, so it must not change.
 

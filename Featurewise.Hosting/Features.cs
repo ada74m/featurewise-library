@@ -83,10 +83,25 @@ public class Features : IDisposable, IAsyncDisposable
     private static readonly ConcurrentDictionary<Type, Type> FeatureTypesByLinkType = new();
 
     /// <summary>
-    /// The JSON property that names a link's feature, qualified by its service, such as <c>hr/Fire</c>, in
-    /// JSON written with options set up by <see cref="ConfigureJson"/>.
+    /// The JSON property that names a link's feature, qualified by its service, such as <c>hr/Fire</c>, for
+    /// a feature of the given family: <c>$query</c>, <c>$command</c> or <c>$worker</c>, in JSON written
+    /// with options set up by <see cref="ConfigureJson"/>.
     /// </summary>
-    public const string FeatureNameProperty = "$feature";
+    /// <param name="family">The feature's family.</param>
+    /// <returns>The property's name.</returns>
+    /// <remarks>
+    /// The property says what following the link will do, as well as which feature it invokes, so a
+    /// client can tell a link that only fetches information from one that changes something without
+    /// asking the service. An entrypoint that builds a link from a feature's name and its arguments uses
+    /// this, with <see cref="FamilyOf"/>, to name the feature as the link's JSON would.
+    /// </remarks>
+    public static string FeatureProperty(FeatureFamily family) => family switch
+    {
+        FeatureFamily.Query => "$query",
+        FeatureFamily.Command => "$command",
+        FeatureFamily.Worker => "$worker",
+        _ => throw new ArgumentOutOfRangeException(nameof(family))
+    };
 
     /// <summary>
     /// The JSON property that names a result's case, in JSON written with options set up by
@@ -154,7 +169,7 @@ public class Features : IDisposable, IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// Several services' links can reach one client, such as a UI that combines them, so every link a
-    /// service writes qualifies its feature's name with the service, as in <c>"$feature":"hr/Fire"</c>, and
+    /// service writes qualifies its feature's name with the service, as in <c>"$command":"hr/Fire"</c>, and
     /// the client sends it back to that service. The id is part of every link handed out, so, like a
     /// feature's name, it must not change, and it can't contain <c>/</c>.
     /// </remarks>
@@ -331,11 +346,15 @@ public class Features : IDisposable, IAsyncDisposable
     /// <returns><paramref name="options"/>, so that the call can be chained.</returns>
     /// <remarks>
     /// <para>
-    /// A link's JSON names its feature in a <see cref="FeatureNameProperty"/> property: the name given at
-    /// <see cref="RegisterFeature{TFeature, TRule}"/>, qualified by <see cref="Service"/>, as in
-    /// <c>hr/Fire</c>. Reading a link through a base type requires that property, and accepts it anywhere
-    /// in the object. A link that names no service, or another one, throws <see cref="JsonException"/>, so
-    /// a link sent to the wrong service is refused rather than invoked as one of this service's features.
+    /// A link's JSON names its feature in a property that also says the feature's family, as
+    /// <see cref="FeatureProperty"/> gives it: <c>$query</c>, <c>$command</c> or <c>$worker</c>. Its value is
+    /// the name given at <see cref="RegisterFeature{TFeature, TRule}"/>, qualified by
+    /// <see cref="Service"/>, as in <c>"$command":"hr/Fire"</c>. Reading a link through a base type requires
+    /// that property, and accepts it anywhere in the object. A link that names no service, or another one,
+    /// or a feature of another family than its property says, throws <see cref="JsonException"/>, so a
+    /// link sent to the wrong service, or mislabelled, is refused rather than invoked. Links written before
+    /// the property said the family named the feature in <c>$feature</c>; reading still accepts that, but
+    /// writing never uses it.
     /// </para>
     /// <para>
     /// Links come back from clients, so reading a link checks its arguments as their types declare: a
@@ -367,7 +386,7 @@ public class Features : IDisposable, IAsyncDisposable
 
     /// <summary>
     /// Whether this <see cref="Features"/> invokes the feature with the given name, qualified by the service
-    /// as in a link's <c>$feature</c>, such as <c>hr/Fire</c>.
+    /// as in a link's JSON, such as <c>hr/Fire</c>.
     /// </summary>
     /// <param name="feature">The feature's name, qualified by the service.</param>
     /// <returns>
@@ -410,7 +429,7 @@ public class Features : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Whether the feature with the given name, qualified by the service as in a link's <c>$feature</c>,
+    /// Whether the feature with the given name, qualified by the service as in a link's JSON,
     /// such as <c>hr/EmployeeSearch</c>, is a <see cref="Query{TArgs, TResult}"/>.
     /// </summary>
     /// <param name="feature">The feature's name, qualified by the service.</param>
@@ -429,7 +448,7 @@ public class Features : IDisposable, IAsyncDisposable
 
     /// <summary>
     /// The family of the feature with the given name, qualified by the service as in a link's
-    /// <c>$feature</c>, such as <c>hr/EmployeeSearch</c>.
+    /// JSON, such as <c>hr/EmployeeSearch</c>.
     /// </summary>
     /// <param name="feature">The feature's name, qualified by the service.</param>
     /// <returns>
@@ -446,14 +465,14 @@ public class Features : IDisposable, IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(feature);
         var featureType = FeatureTypeNamed(feature);
-        if (featureType is null)
-            return null;
-        if (GenericArgumentsOf(featureType, typeof(Query<,>)) is not null)
-            return FeatureFamily.Query;
-        if (GenericArgumentsOf(featureType, typeof(Command<,>)) is not null)
-            return FeatureFamily.Command;
-        return FeatureFamily.Worker;
+        return featureType is null ? null : FamilyOfFeatureType(featureType);
     }
+
+    // The family a feature type derives from.
+    internal static FeatureFamily FamilyOfFeatureType(Type featureType) =>
+        GenericArgumentsOf(featureType, typeof(Query<,>)) is not null ? FeatureFamily.Query
+        : GenericArgumentsOf(featureType, typeof(Command<,>)) is not null ? FeatureFamily.Command
+        : FeatureFamily.Worker;
 
     /// <summary>
     /// Invokes the feature that <paramref name="link"/> names, with the arguments it carries, and returns

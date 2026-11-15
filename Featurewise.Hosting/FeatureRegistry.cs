@@ -10,6 +10,7 @@ namespace Featurewise;
 internal sealed class FeatureRegistry(string service)
 {
     private readonly Dictionary<Type, string> _featureNamesByArgsType = new();
+    private readonly Dictionary<Type, FeatureFamily> _familiesByArgsType = new();
 
     public string Service { get; } = service;
     private readonly HashSet<Type> _resultTypes = new();
@@ -25,7 +26,15 @@ internal sealed class FeatureRegistry(string service)
             throw new InvalidOperationException($"another registered feature is already named {name}");
 
         _featureNamesByArgsType.Add(argsType, name);
+        _familiesByArgsType.Add(argsType, Features.FamilyOfFeatureType(Features.GenericArgumentsOf(argsType, typeof(Link<,>))![0]));
         _resultTypes.Add(resultType);
+    }
+
+    // The name and family of the feature a link type invokes, if it's registered.
+    public bool TryGet(Type linkType, out string name, out FeatureFamily family)
+    {
+        family = default;
+        return _featureNamesByArgsType.TryGetValue(linkType, out name!) && _familiesByArgsType.TryGetValue(linkType, out family);
     }
 
     // The arguments type of the feature, or the links, registered under a name unqualified by the service,
@@ -35,43 +44,14 @@ internal sealed class FeatureRegistry(string service)
 
     public JsonSerializerOptions ConfigureJson(JsonSerializerOptions options)
     {
+        options.Converters.Add(new LinkJsonConverterFactory(this));
         options.TypeInfoResolver = (options.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver())
-            .WithAddedModifier(AddFeatureNamesToLinks)
             .WithAddedModifier(RequireLinkArguments)
             .WithAddedModifier(AddCaseNamesToResults);
 
         // Clients and other serializers needn't put the feature or case name first.
         options.AllowOutOfOrderMetadataProperties = true;
         return options;
-    }
-
-    // Makes every link type, concrete or a base such as Link or Link<TResult>, polymorphic over the registered
-    // links it could be, using feature names qualified by the service, such as hr/Fire, as type
-    // discriminators. A concrete link counts as one of its own derived types, so it carries its feature
-    // name however it's declared. A link naming no service or another one matches no discriminator, so
-    // reading it fails.
-    private void AddFeatureNamesToLinks(JsonTypeInfo typeInfo)
-    {
-        if (typeInfo.Kind != JsonTypeInfoKind.Object || !typeof(Link).IsAssignableFrom(typeInfo.Type))
-            return;
-
-        var derivedTypes = _featureNamesByArgsType
-            .Where(entry => typeInfo.Type.IsAssignableFrom(entry.Key))
-            .Select(entry => new JsonDerivedType(entry.Key, $"{Service}/{entry.Value}"))
-            .ToList();
-
-        // Without this, a link to an unregistered feature would be written without its arguments
-        // when declared as a base type, or without its feature name when declared as itself.
-        if (derivedTypes.Count == 0)
-        {
-            typeInfo.OnSerializing = link => throw new NotSupportedException(
-                $"can't serialize {link.GetType().Name}: it isn't a link to a registered feature");
-            return;
-        }
-
-        typeInfo.PolymorphismOptions = new JsonPolymorphismOptions { TypeDiscriminatorPropertyName = Features.FeatureNameProperty };
-        foreach (var derivedType in derivedTypes)
-            typeInfo.PolymorphismOptions.DerivedTypes.Add(derivedType);
     }
 
     // Links come back from clients, so a link's JSON must supply every non-nullable argument that has
