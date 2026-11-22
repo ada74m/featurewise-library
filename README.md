@@ -1,5 +1,7 @@
 # Featurewise
 
+Featurewise for .NET: [featurewise.dev/dotnet](https://featurewise.dev/dotnet/), and the ideas behind it at [featurewise.dev](https://featurewise.dev/).
+
 A service is the set of things it can do, and each of those things is a feature: a query, a command or a worker. Featurewise gives every feature the same shape, and gives the code that calls features one way to call any of them.
 
 The call is a value. A **link** names a feature and carries the arguments to invoke it with. A link is a potential invocation: an entrypoint invokes it now, a feature returns it to say what the caller can do next, a queue carries it to a worker. **`Features`** invokes links, and wraps every invocation in the same scope, authorization, logging, tracing and cancellation.
