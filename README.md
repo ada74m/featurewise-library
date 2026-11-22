@@ -214,3 +214,7 @@ dotnet test
 ```
 
 `global.json` pins the .NET 10 SDK to released versions. `Featurewise` is `Featurewise.Core`, `Featurewise.Hosting` is `Featurewise.Hosting`, and `Featurewise.Tests` holds their tests and the small features they exercise.
+
+## Licence
+
+MIT: see `LICENSE`.

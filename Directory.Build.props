@@ -6,6 +6,7 @@
         <VersionPrefix>0.1.0</VersionPrefix>
         <VersionSuffix Condition="'$(VersionSuffix)' == ''">dev</VersionSuffix>
         <Authors>Adam Rambridge</Authors>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <RepositoryUrl>https://github.com/ada74m/featurewise-library</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
