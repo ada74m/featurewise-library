@@ -11,7 +11,7 @@
         <RepositoryUrl>https://github.com/ada74m/featurewise-library</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PublishRepositoryUrl>true</PublishRepositoryUrl>
-        <!-- Symbols travel in the assembly, since GitHub Packages takes no symbol packages; Source Link
+        <!-- Symbols travel in the assembly, so no separate symbol package is needed; Source Link
              points debuggers at the commit's sources on GitHub. -->
         <DebugType>embedded</DebugType>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>

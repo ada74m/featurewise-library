@@ -1,6 +1,6 @@
 # Builds and tests the library on every pull request and push to main. Each push to main also packs the
-# library as previews of Featurewise.Core and Featurewise.Hosting, at one version, and publishes them to this
-# account's GitHub Packages feed.
+# library as previews of Featurewise.Core and Featurewise.Hosting, at one version, and publishes them to
+# nuget.org.
 name: CI
 
 on:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
+      id-token: write
     env:
       VERSION_SUFFIX: preview.${{ github.run_number }}
     steps:
@@ -41,9 +41,18 @@ jobs:
           path: out/*.nupkg
           if-no-files-found: error
 
-      - name: Publish to GitHub Packages
+      # nuget.org trusts this workflow, by a trusted publishing policy for this repository and ci.yml, so
+      # there's no key to keep: the login swaps the run's OIDC token for a short-lived API key.
+      - name: Sign in to nuget.org
         if: github.event_name == 'push'
-        run: dotnet nuget push "out/*.nupkg" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key "${{ secrets.GITHUB_TOKEN }}"
+        id: nuget
+        uses: NuGet/login@v1
+        with:
+          user: ada1974m
+
+      - name: Publish to nuget.org
+        if: github.event_name == 'push'
+        run: dotnet nuget push "out/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}"
 
       - name: Tag the commit
         if: github.event_name == 'push'
